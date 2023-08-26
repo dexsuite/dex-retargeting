@@ -22,6 +22,7 @@ core_requirements = [
     "trimesh",
     "anytree",
     "pycollada",
+    "yaml",
 ]
 
 dev_requirements = [
