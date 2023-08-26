@@ -1,0 +1,4 @@
+[submodule "assets"]
+	path = assets
+	url = https://github.com/dexsuite/dex-urdf.git
+	branch = init_dev
