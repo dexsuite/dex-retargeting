@@ -24,7 +24,7 @@ core_requirements = [
     "pycollada",
 ]
 
-test_requirements = [
+dev_requirements = [
     "pytest",
     "black",
     "isort",
@@ -79,7 +79,7 @@ def setup_package():
         zip_safe=True,
         install_requires=core_requirements,
         extras_require={
-            "test": test_requirements,
+            "dev": dev_requirements,
         },
         classifiers=classifiers,
     )
