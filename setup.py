@@ -23,6 +23,7 @@ core_requirements = [
     "anytree",
     "pycollada",
     "pyyaml",
+    "lxml",
 ]
 
 dev_requirements = [
