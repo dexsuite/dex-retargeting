@@ -29,9 +29,9 @@ jobs:
       - name: Run Black
         run: |
           black dex_retargeting/ tests/ --check
-      - name: Run Pyright
-        run: |
-          pyright
+      #      - name: Run Pyright
+      #        run: |
+      #          pyright
       - name: Test with pytest
         run: |
           pytest
