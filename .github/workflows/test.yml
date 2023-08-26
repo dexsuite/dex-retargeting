@@ -24,6 +24,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
+          git submodule update --init
           python -m pip install --upgrade pip
           pip install --upgrade -e .[dev]
       - name: Run Black
