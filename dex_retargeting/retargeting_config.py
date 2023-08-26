@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import List, Optional, Dict
 from pathlib import Path
+from typing import List, Optional, Dict
+from typing import Union
 
 import numpy as np
 import yaml
@@ -97,7 +98,7 @@ class RetargetingConfig:
         cls._DEFAULT_URDF_DIR = urdf_dir
 
     @classmethod
-    def load_from_file(cls, config_path, override: Optional[Dict] = None):
+    def load_from_file(cls, config_path: Union[str, Path], override: Optional[Dict] = None):
         path = Path(config_path)
         if not path.is_absolute():
             path = path.absolute()
@@ -118,7 +119,6 @@ class RetargetingConfig:
             VectorOptimizer,
             PositionOptimizer,
             DexPilotAllegroOptimizer,
-            DexPilotAllegroV4Optimizer,
         )
         from dex_retargeting.optimizer_utils import SAPIENKinematicsModelStandalone
         from dex_retargeting import yourdfpy as urdf
@@ -191,7 +191,6 @@ def get_retargeting_config(config_path) -> RetargetingConfig:
 
 if __name__ == "__main__":
     # Path below is relative to this file
-    from pathlib import Path
 
     test_config = get_retargeting_config(str(Path(__file__).parent / "configs/allegro_hand.yml"))
     print(test_config)

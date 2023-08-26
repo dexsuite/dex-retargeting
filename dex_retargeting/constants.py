@@ -1,0 +1,39 @@
+import enum
+from pathlib import Path
+
+
+class RobotName(enum.Enum):
+    allegro = enum.auto()
+    shadow = enum.auto()
+    svh = enum.auto()
+
+
+class RetargetingType(enum.Enum):
+    vector = enum.auto()
+    position = enum.auto()
+    dexpilot = enum.auto()
+
+
+class HandType(enum.Enum):
+    right = enum.auto()
+    left = enum.auto()
+
+
+ROBOT_NAME_MAP = {
+    RobotName.allegro: "allegro_hand",
+    RobotName.shadow: "shadow_hand",
+    RobotName.svh: "schunk_svh_hand",
+}
+
+
+def get_config_path(robot_name: RobotName, retargeting_type: RetargetingType, hand_type: HandType) -> Path:
+    config_path = Path(__file__).parent / "configs"
+    if retargeting_type is RetargetingType.position:
+        config_path = config_path / "offline"
+    else:
+        config_path = config_path / "teleop"
+
+    robot_name_str = ROBOT_NAME_MAP[robot_name]
+    hand_type_str = hand_type.name
+    config_name = f"{robot_name_str}_{hand_type_str}.yml"
+    return config_path / config_name
