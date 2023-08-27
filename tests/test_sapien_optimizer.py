@@ -7,7 +7,9 @@ import sapien.core as sapien
 
 from dex_retargeting.optimizer import VectorOptimizer, PositionOptimizer
 from dex_retargeting.retargeting_config import RetargetingConfig
-from utils import ROBOT_NAMES, VECTOR_CONFIG_DICT, POSITION_CONFIG_DICT
+
+# from utils import ROBOT_NAMES, VECTOR_CONFIG_DICT, POSITION_CONFIG_DICT
+from dex_retargeting.constants import ROBOT_NAMES, get_config_path, RetargetingType, HandType
 
 
 class TestVectorOptimizer:
@@ -42,8 +44,9 @@ class TestVectorOptimizer:
         return random_qpos, init_qpos, random_target_pos
 
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES[:1])
-    def test_position_optimizer(self, robot_name):
-        config_path = self.config_dir / POSITION_CONFIG_DICT[robot_name]
+    @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
+    def test_position_optimizer(self, robot_name, hand_type):
+        config_path = get_config_path(robot_name, RetargetingType.position, hand_type)
 
         # Note: The parameters below are adjusted solely for this test
         # The smoothness penalty is deactivated here, meaning no low pass filter and no continuous joint value
@@ -80,15 +83,15 @@ class TestVectorOptimizer:
         assert np.mean(errors["pos"]) < 1e-2
 
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
-    def test_vector_optimizer(self, robot_name):
-        config_path = self.config_dir / VECTOR_CONFIG_DICT[robot_name]
+    @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
+    def test_vector_optimizer(self, robot_name, hand_type):
+        config_path = get_config_path(robot_name, RetargetingType.vector, hand_type)
 
         # Note: The parameters below are adjusted solely for this test
         # For retargeting from human to robot, their values should remain the default in the retargeting config
         # The smoothness penalty is deactivated here, meaning no low pass filter and no continuous joint value
         # This is because the test is focused solely on the efficiency of single step optimization
         override = dict()
-        override["type"] = "vector"  # cast it to vector retargeting even if it is DexPilot retargeting
         override["low_pass_alpha"] = 0
         override["scaling_factor"] = 1.0
         override["normal_delta"] = 0
@@ -121,5 +124,50 @@ class TestVectorOptimizer:
 
         tac = time()
         print(f"Mean optimization vector error: {np.mean(errors['pos'])}")
+        print(f"Retargeting computation takes {tac - tic}s for {num_optimization} times")
+        assert np.mean(errors["pos"]) < 1e-2
+
+    @pytest.mark.parametrize("robot_name", ROBOT_NAMES[:1])
+    @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
+    def test_dexpilot_optimizer(self, robot_name, hand_type):
+        config_path = get_config_path(robot_name, RetargetingType.dexpilot, hand_type)
+
+        # Note: The parameters below are adjusted solely for this test
+        # For retargeting from human to robot, their values should remain the default in the retargeting config
+        # The smoothness penalty is deactivated here, meaning no low pass filter and no continuous joint value
+        # This is because the test is focused solely on the efficiency of single step optimization
+        override = dict()
+        override["low_pass_alpha"] = 0
+        override["scaling_factor"] = 1.0
+        override["normal_delta"] = 0
+        config = RetargetingConfig.load_from_file(config_path, override)
+
+        retargeting = config.build()
+
+        robot = retargeting.optimizer.robot
+        optimizer = retargeting.optimizer
+
+        num_optimization = 100
+        tic = time()
+        errors = dict(pos=[], joint=[])
+        np.random.seed(1)
+        for i in range(num_optimization):
+            # Sampled random vector
+            random_qpos, init_qpos, random_target_vector = self.generate_vector_retargeting_data_gt(robot, optimizer)
+
+            # Optimized vector
+            computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=[], last_qpos=init_qpos[:])
+            robot.set_qpos(np.array(computed_qpos))
+            computed_pos = np.array([robot.get_links()[i].get_pose().p for i in optimizer.robot_link_indices])
+            computed_origin_pos = computed_pos[optimizer.origin_link_indices]
+            computed_task_pos = computed_pos[optimizer.task_link_indices]
+            computed_target_vector = computed_task_pos - computed_origin_pos
+
+            # Vector difference
+            error = np.mean(np.linalg.norm(computed_target_vector - random_target_vector, axis=1))
+            errors["pos"].append(error)
+
+        tac = time()
+        print(f"Mean optimization vector error for DexPilot retargeting: {np.mean(errors['pos'])}")
         print(f"Retargeting computation takes {tac - tic}s for {num_optimization} times")
         assert np.mean(errors["pos"]) < 1e-2

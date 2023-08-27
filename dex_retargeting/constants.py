@@ -25,6 +25,8 @@ ROBOT_NAME_MAP = {
     RobotName.svh: "schunk_svh_hand",
 }
 
+ROBOT_NAMES = list(ROBOT_NAME_MAP.keys())
+
 
 def get_config_path(robot_name: RobotName, retargeting_type: RetargetingType, hand_type: HandType) -> Path:
     config_path = Path(__file__).parent / "configs"
@@ -35,5 +37,8 @@ def get_config_path(robot_name: RobotName, retargeting_type: RetargetingType, ha
 
     robot_name_str = ROBOT_NAME_MAP[robot_name]
     hand_type_str = hand_type.name
-    config_name = f"{robot_name_str}_{hand_type_str}.yml"
+    if retargeting_type == RetargetingType.dexpilot:
+        config_name = f"{robot_name_str}_{hand_type_str}_dexpilot.yml"
+    else:
+        config_name = f"{robot_name_str}_{hand_type_str}.yml"
     return config_path / config_name
