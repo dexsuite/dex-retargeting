@@ -62,6 +62,17 @@ def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: st
 def main(
     robot_name: RobotName, video_path: str, output_path: str, retargeting_type: RetargetingType, hand_type: HandType
 ):
+    """
+    Detects the human hand pose from a video and translates the human pose trajectory into a robot pose trajectory.
+
+    Args:
+        robot_name: The identifier for the robot. This should match one of the default supported robots.
+        video_path: The file path for the input video in .mp4 format.
+        output_path: The file path for the output data in .pickle format.
+        retargeting_type: The type of retargeting, each type corresponds to a different retargeting algorithm.
+        hand_type: Specifies which hand is being tracked, either left or right.
+    """
+
     config_path = get_config_path(robot_name, retargeting_type, hand_type)
     robot_dir = Path(__file__).parent.parent / "assets" / "robots"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
