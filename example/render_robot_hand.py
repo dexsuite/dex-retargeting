@@ -72,6 +72,8 @@ def render_by_sapien(
         viewer = Viewer(renderer)
         viewer.set_scene(scene)
         viewer.focus_camera(cam)
+        viewer.toggle_axes(False)
+        viewer.toggle_camera_lines(False)
     else:
         viewer = None
 

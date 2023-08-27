@@ -71,6 +71,8 @@ def main(
         output_path: The file path for the output data in .pickle format.
         retargeting_type: The type of retargeting, each type corresponds to a different retargeting algorithm.
         hand_type: Specifies which hand is being tracked, either left or right.
+            Please note that retargeting is specific to the same type of hand: a left robot hand can only be retargeted
+            to another left robot hand, and the same applies for the right hand.
     """
 
     config_path = get_config_path(robot_name, retargeting_type, hand_type)
