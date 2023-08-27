@@ -10,3 +10,46 @@ Dex Retargeting
         <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
     </a>
 </p>
+
+## Installation
+
+```shell
+pip3 install -e ".[example]"
+# If you do not need to run the examples:
+# pip install -e .
+
+```
+
+## Examples
+
+### Test retargeting with our supplied human video
+
+1. **Generate the robot joint pose trajectory from a pre-existing video.**
+
+```shell
+python3 example/detect_from_video.py \
+  --robot-name allegro \
+  --video-path example/data/human_hand_video.mp4 \
+  --retargeting-type vector \
+  --hand-type right \
+  --output-path example/data/allegro_joints.pkl 
+```
+
+This command will output the joint trajectory as a pickle file at the `output_path`.
+
+The pickle file is a python dictionary with two keys: `meta_data` and `data`. `meta_data`, a dictionary, includes details about the robot, while `data`, a list, contains the robotic joint positions for each frame. For additional options, refer to the help information.
+
+```shell
+python3 example/detect_from_video.py --help
+```
+
+2. **Utilize the pickle file to produce a video of the robot**
+
+```shell
+python3 example/render_robot_hand.py \
+  --pickle-path example/data/allegro_joints.pkl \
+  --output-video-path example/data/retargeted_allegro.mp4 \
+  --headless
+```
+
+This command uses the data saved from the previous step to create a rendered video.
