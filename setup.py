@@ -35,6 +35,13 @@ dev_requirements = [
     "ruff",
 ]
 
+example_requirements = [
+    "tyro",
+    "tqdm",
+    "opencv-python",
+    "mediapipe",
+]
+
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -74,14 +81,15 @@ def setup_package():
         long_description=readme,
         long_description_content_type="text/markdown",
         url=url,
-        license='MIT',
+        license="MIT",
         license_files=("LICENSE",),
         packages=packages,
-        python_requires='>=3.7,<3.11',
+        python_requires=">=3.7,<3.11",
         zip_safe=True,
         install_requires=core_requirements,
         extras_require={
             "dev": dev_requirements,
+            "example": example_requirements,
         },
         classifiers=classifiers,
     )
