@@ -22,9 +22,9 @@ pip3 install -e ".[example]"
 
 ## Examples
 
-### Test retargeting with our supplied human video
+### Retargeting from human video
 
-1. **Generate the robot joint pose trajectory from a pre-existing video.**
+1. **Generate the robot joint pose trajectory from our pre-recorded video.**
 
 ```shell
 python3 example/detect_from_video.py \
@@ -37,7 +37,9 @@ python3 example/detect_from_video.py \
 
 This command will output the joint trajectory as a pickle file at the `output_path`.
 
-The pickle file is a python dictionary with two keys: `meta_data` and `data`. `meta_data`, a dictionary, includes details about the robot, while `data`, a list, contains the robotic joint positions for each frame. For additional options, refer to the help information.
+The pickle file is a python dictionary with two keys: `meta_data` and `data`. `meta_data`, a dictionary, includes
+details about the robot, while `data`, a list, contains the robotic joint positions for each frame. For additional
+options, refer to the help information.
 
 ```shell
 python3 example/detect_from_video.py --help
@@ -53,3 +55,12 @@ python3 example/render_robot_hand.py \
 ```
 
 This command uses the data saved from the previous step to create a rendered video.
+
+3. **Record a video of your own hand**
+
+```bash
+python3 example/capture_webcam.py --video-path example/data/my_human_hand_video.mp4
+```
+
+This command will access your webcam (which should be connected to your computer) and record the video stream in mp4
+format. To end video recording, press `q` on the keyboard.
