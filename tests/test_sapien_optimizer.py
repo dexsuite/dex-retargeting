@@ -10,7 +10,7 @@ from dex_retargeting.optimizer import VectorOptimizer, PositionOptimizer
 from dex_retargeting.retargeting_config import RetargetingConfig
 
 
-class TestVectorOptimizer:
+class TestSapienOptimizer:
     np.set_printoptions(precision=4)
     config_dir = Path(__file__).parent.parent / "dex_retargeting" / "configs"
     robot_dir = Path(__file__).parent.parent / "assets" / "robots"
