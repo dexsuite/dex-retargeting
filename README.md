@@ -40,7 +40,8 @@ This command will output the joint trajectory as a pickle file at the `output_pa
 
 The pickle file is a python dictionary with two keys: `meta_data` and `data`. `meta_data`, a dictionary, includes
 details about the robot, while `data`, a list, contains the robotic joint positions for each frame. For additional
-options, refer to the help information.
+options, refer to the help information. Note that the time cost here includes both the hand pose detection from video,
+and the hand pose retargeting in single process mode.
 
 ```shell
 python3 example/detect_from_video.py --help

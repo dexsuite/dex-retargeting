@@ -7,7 +7,7 @@ retargeting:
   target_joint_names: null
   wrist_link_name: "right_hand_base_link"
   finger_tip_link_names: [ "right_hand_c", "right_hand_t", "right_hand_s", "right_hand_r", "right_hand_q" ]
-  scaling_factor: 1.1
+  scaling_factor: 1.2
 
   # Source refers to the retargeting input, which usually corresponds to the human hand
   # The joint indices of human hand joint which corresponds to each link in the target_link_names
