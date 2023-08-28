@@ -1,0 +1,38 @@
+name: Core Tests
+
+on:
+  push:
+    branches: [ main, init_dev ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.8" ]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          git submodule update --init
+          python -m pip install --upgrade pip
+          pip install --upgrade -e .[dev]
+      - name: Run Black
+        run: |
+          black dex_retargeting/ tests/ --check
+      #      - name: Run Pyright
+      #        run: |
+      #          pyright
+      - name: Test with pytest
+        run: |
+          pytest

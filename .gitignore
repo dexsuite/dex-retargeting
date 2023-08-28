@@ -1,0 +1,17 @@
+build
+.vscode
+.pyc
+*.blend
+cmake-build-debug
+/cmake-build-debug/
+/.ccls-cache/
+/.dir-locals.el
+__pycache__
+.ini
+*.convex.*
+imgui.ini
+.mypy_cache
+.DS_Store
+/.idea
+/log
+/example/data/output_*.mp4

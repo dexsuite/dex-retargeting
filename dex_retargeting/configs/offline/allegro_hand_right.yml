@@ -1,0 +1,12 @@
+retargeting:
+  type: position
+  urdf_path: allegro_hand/allegro_hand_right.urdf
+  use_camera_frame_retargeting: False
+
+  target_joint_names: null
+  target_link_names: [ "link_15.0_tip", "link_3.0_tip", "link_7.0_tip", "link_11.0_tip" ]
+
+  target_link_human_indices: [ 4, 8, 12, 16 ]
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  low_pass_alpha: 0.2
