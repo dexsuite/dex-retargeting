@@ -5,11 +5,9 @@ import numpy as np
 import pytest
 import sapien.core as sapien
 
+from dex_retargeting.constants import ROBOT_NAMES, get_config_path, RetargetingType, HandType
 from dex_retargeting.optimizer import VectorOptimizer, PositionOptimizer
 from dex_retargeting.retargeting_config import RetargetingConfig
-
-# from utils import ROBOT_NAMES, VECTOR_CONFIG_DICT, POSITION_CONFIG_DICT
-from dex_retargeting.constants import ROBOT_NAMES, get_config_path, RetargetingType, HandType
 
 
 class TestVectorOptimizer:
