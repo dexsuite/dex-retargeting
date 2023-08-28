@@ -89,7 +89,7 @@ def render_by_sapien(
         robot.set_qpos(np.array(qpos)[retargeting_to_sapien])
 
         if not headless:
-            for _ in range(3):
+            for _ in range(2):
                 viewer.render()
         if record_video:
             scene.update_render()

@@ -177,7 +177,7 @@ class VectorOptimizer(Optimizer):
         super().__init__(robot, target_joint_names, target_link_human_indices)
         self.origin_link_names = target_origin_link_names
         self.task_link_names = target_task_link_names
-        self.huber_loss = torch.nn.SmoothL1Loss(beta=huber_delta)
+        self.huber_loss = torch.nn.SmoothL1Loss(beta=huber_delta, reduction="mean")
         self.norm_delta = norm_delta
         self.scaling = scaling
 
@@ -222,7 +222,8 @@ class VectorOptimizer(Optimizer):
             robot_vec = task_link_pos - origin_link_pos
 
             # Loss term for kinematics retargeting based on 3D position error
-            huber_distance = self.huber_loss(robot_vec, torch_target_vec)
+            vec_dist = torch.norm(robot_vec - torch_target_vec, dim=1, keepdim=False)
+            huber_distance = self.huber_loss(vec_dist, torch.zeros_like(vec_dist))
             result = huber_distance.cpu().detach().item()
 
             if grad.size > 0:
@@ -269,6 +270,27 @@ class VectorOptimizer(Optimizer):
 
 
 class DexPilotAllegroOptimizer(Optimizer):
+    """Retargeting optimizer using the method proposed in DexPilot
+
+    This is a broader adaptation of the original optimizer delineated in the DexPilot paper.
+    While the initial DexPilot study focused solely on the four-fingered Allegro Hand, this version of the optimizer
+    embraces the same principles for both four-fingered and five-fingered hands. It projects the distance between the
+    thumb and the other fingers to facilitate more stable grasping.
+    Reference: https://arxiv.org/abs/1910.03135
+
+    Args:
+        robot:
+        target_joint_names:
+        finger_tip_link_names:
+        wrist_link_name:
+        gamma:
+        project_dist:
+        escape_dist:
+        eta1:
+        eta2:
+        scaling:
+    """
+
     retargeting_type = "DEXPILOT"
 
     def __init__(
@@ -277,36 +299,41 @@ class DexPilotAllegroOptimizer(Optimizer):
         target_joint_names: List[str],
         finger_tip_link_names: List[str],
         wrist_link_name: str,
+        huber_delta=0.03,
+        norm_delta=4e-3,
         # DexPilot parameters
-        gamma=2.5e-3,
+        # gamma=2.5e-3,
         project_dist=0.03,
         escape_dist=0.05,
         eta1=1e-4,
         eta2=3e-2,
         scaling=1.0,
     ):
+        if len(finger_tip_link_names) < 4 or len(finger_tip_link_names) > 5:
+            raise ValueError(f"DexPilot optimizer can only be applied to hands with four or five fingers")
         is_four_finger = len(finger_tip_link_names) == 4
-        link_names = [wrist_link_name] + finger_tip_link_names
         if is_four_finger:
             origin_link_index = [2, 3, 4, 3, 4, 4, 0, 0, 0, 0]
             task_link_index = [1, 1, 1, 2, 2, 3, 1, 2, 3, 4]
-            target_origin_link_names = [link_names[index] for index in origin_link_index]
-            target_task_link_names = [link_names[index] for index in task_link_index]
-            target_link_human_indices = np.array(
-                [[8, 12, 16, 12, 16, 16, 0, 0, 0, 0], [4, 4, 4, 8, 8, 12, 4, 8, 12, 16]]
-            )
+            self.num_fingers = 4
         else:
-            raise NotImplementedError
+            origin_link_index = [2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 0, 0, 0, 0, 0]
+            task_link_index = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 1, 2, 3, 4, 5]
+            self.num_fingers = 5
+
+        target_link_human_indices = (np.stack([origin_link_index, task_link_index], axis=0) * 4).astype(int)
+        link_names = [wrist_link_name] + finger_tip_link_names
+        target_origin_link_names = [link_names[index] for index in origin_link_index]
+        target_task_link_names = [link_names[index] for index in task_link_index]
 
         super().__init__(robot, target_joint_names, target_link_human_indices)
         self.origin_link_names = target_origin_link_names
         self.task_link_names = target_task_link_names
         self.scaling = scaling
-        # self.norm_delta = norm_delta
-        # self.huber_loss = torch.nn.SmoothL1Loss(beta=huber_delta)
+        self.huber_loss = torch.nn.SmoothL1Loss(beta=huber_delta, reduction="none")
+        self.norm_delta = norm_delta
 
         # DexPilot parameters
-        self.gamma = gamma
         self.project_dist = project_dist
         self.escape_dist = escape_dist
         self.eta1 = eta1
@@ -332,40 +359,60 @@ class DexPilotAllegroOptimizer(Optimizer):
         self.opt.set_ftol_abs(1e-6)
 
         # DexPilot cache
-        self.projected = np.zeros(6, dtype=bool)
-        self.s2_project_index_origin = np.array([1, 2, 2], dtype=int)
-        self.s2_project_index_task = np.array([0, 0, 1], dtype=int)
-        self.projected_dist = np.array([eta1] * 3 + [eta2] * 3)
+        if is_four_finger:
+            self.projected = np.zeros(6, dtype=bool)
+            self.s2_project_index_origin = np.array([1, 2, 2], dtype=int)
+            self.s2_project_index_task = np.array([0, 0, 1], dtype=int)
+            self.projected_dist = np.array([eta1] * 3 + [eta2] * 3)
+        else:
+            self.projected = np.zeros(10, dtype=bool)
+            self.s2_project_index_origin = np.array([1, 2, 3, 2, 3, 3], dtype=int)
+            self.s2_project_index_task = np.array([0, 0, 0, 1, 1, 2], dtype=int)
+            self.projected_dist = np.array([eta1] * 4 + [eta2] * 6)
 
-    def _get_objective_function(self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
+    def _get_objective_function_four_finger(
+        self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray
+    ):
         target_vector = target_vector.astype(np.float32)
         qpos = np.zeros(self.robot_dof)
         qpos[self.fixed_joint_indices] = fixed_qpos
 
+        len_proj = len(self.projected)
+        len_s2 = len(self.s2_project_index_task)
+        len_s1 = len_proj - len_s2
+
         # Update projection indicator
-        target_vec_dist = np.linalg.norm(target_vector[:6], axis=1)
-        self.projected[:3][target_vec_dist[0:3] < self.project_dist] = True
-        self.projected[:3][target_vec_dist[0:3] > self.escape_dist] = False
-        self.projected[3:6] = np.logical_and(
-            self.projected[:3][self.s2_project_index_origin], self.projected[:3][self.s2_project_index_task]
+        target_vec_dist = np.linalg.norm(target_vector[:len_proj], axis=1)
+        self.projected[:len_s1][target_vec_dist[0:len_s1] < self.project_dist] = True
+        self.projected[:len_s1][target_vec_dist[0:len_s1] > self.escape_dist] = False
+        self.projected[len_s1:len_proj] = np.logical_and(
+            self.projected[:len_s1][self.s2_project_index_origin], self.projected[:len_s1][self.s2_project_index_task]
+        )
+        self.projected[len_s1:len_proj] = np.logical_and(
+            self.projected[len_s1:len_proj], target_vec_dist[len_s1:len_proj] <= 0.03
         )
 
         # Update weight vector
-        normal_weight = np.ones(6, dtype=np.float32)
-        high_weight = np.array([200] * 3 + [400] * 3, dtype=np.float32)
+        normal_weight = np.ones(len_proj, dtype=np.float32) * 1
+        high_weight = np.array([200] * len_s1 + [400] * len_s2, dtype=np.float32)
         weight = np.where(self.projected, high_weight, normal_weight)
-        weight = torch.from_numpy(np.concatenate([weight, np.ones(4, dtype=np.float32) * 10]))
+
+        # We change the weight to 10 instead of 1 here, for vector originate from wrist to fingertips
+        # This ensures better intuitive mapping due wrong pose detection
+        weight = torch.from_numpy(
+            np.concatenate([weight, np.ones(self.num_fingers, dtype=np.float32) * len_proj + self.num_fingers])
+        )
 
         # Compute reference distance vector
         normal_vec = target_vector * self.scaling  # (10, 3)
-        dir_vec = target_vector[:6] / (target_vec_dist[:, None] + 1e-6)  # (6, 3)
+        dir_vec = target_vector[:len_proj] / (target_vec_dist[:, None] + 1e-6)  # (6, 3)
         projected_vec = dir_vec * self.projected_dist[:, None]  # (6, 3)
 
         # Compute final reference vector
-        reference_vec = np.where(self.projected[:, None], projected_vec, normal_vec[:6])  # (6, 3)
-        reference_vec = np.concatenate([reference_vec, normal_vec[6:10]], axis=0)  # (10, 3)
-        torch_ref_vec = torch.as_tensor(reference_vec, dtype=torch.float32)
-        torch_ref_vec.requires_grad_(False)
+        reference_vec = np.where(self.projected[:, None], projected_vec, normal_vec[:len_proj])  # (6, 3)
+        reference_vec = np.concatenate([reference_vec, normal_vec[len_proj:]], axis=0)  # (10, 3)
+        torch_target_vec = torch.as_tensor(reference_vec, dtype=torch.float32)
+        torch_target_vec.requires_grad_(False)
 
         def objective(x: np.ndarray, grad: np.ndarray) -> float:
             qpos[self.target_joint_indices] = x
@@ -383,10 +430,13 @@ class DexPilotAllegroOptimizer(Optimizer):
             robot_vec = task_link_pos - origin_link_pos
 
             # Loss term for kinematics retargeting based on 3D position error
-            error = robot_vec - torch_ref_vec
-            mse_loss = torch.sum(error * error, dim=1)  # (10)
-            weighted_mse_loss = torch.sum(mse_loss * weight)
-            result = weighted_mse_loss.cpu().detach().item()
+            # Different from the original DexPilot, we use huber loss here instead of the squared dist
+            vec_dist = torch.norm(robot_vec - torch_target_vec, dim=1, keepdim=False)
+            huber_distance = (
+                self.huber_loss(vec_dist, torch.zeros_like(vec_dist)) * weight / (robot_vec.shape[0])
+            ).sum()
+            huber_distance = huber_distance.sum()
+            result = huber_distance.cpu().detach().item()
 
             if grad.size > 0:
                 if self.use_sparse_jacobian:
@@ -406,14 +456,15 @@ class DexPilotAllegroOptimizer(Optimizer):
                         for index in self.robot_link_indices
                     ]
 
-                weighted_mse_loss.backward()
+                huber_distance.backward()
                 grad_pos = torch_body_pos.grad.cpu().numpy()[:, None, :]
                 grad_qpos = np.matmul(grad_pos, np.array(jacobians))
                 grad_qpos = grad_qpos.mean(1).sum(0)
 
-                #  Finally, γ = 2.5 × 10−3 is a weight on regularizing the Allegro angles to zero
-                #  (equivalent to fully opened the hand)
-                grad_qpos += 2 * self.gamma * x
+                # In the original DexPilot, γ = 2.5 × 10−3 is a weight on regularizing the Allegro angles to zero
+                # which is equivalent to fully opened the hand
+                # In our implementation, we regularize the joint angles to the previous joint angles
+                grad_qpos += 2 * self.norm_delta * (x - last_qpos)
 
                 grad[:] = grad_qpos[:]
 
@@ -428,48 +479,7 @@ class DexPilotAllegroOptimizer(Optimizer):
             )
         if last_qpos is None:
             last_qpos = np.zeros(self.dof)
-        objective_fn = self._get_objective_function(ref_value, fixed_qpos, np.array(last_qpos).astype(np.float32))
+        objective_fn = self._get_objective_function_four_finger(
+            ref_value, fixed_qpos, np.array(last_qpos).astype(np.float32)
+        )
         return self.optimize(objective_fn, last_qpos)
-
-
-class DexPilotAllegroV4Optimizer(DexPilotAllegroOptimizer):
-    origin_link_names = [
-        "link_3.0_tip",
-        "link_7.0_tip",
-        "link_11.0_tip",
-        "link_7.0_tip",
-        "link_11.0_tip",
-        "link_11.0_tip",
-        "wrist",
-        "wrist",
-        "wrist",
-        "wrist",  # root
-    ]
-    task_link_names = [
-        "link_15.0_tip",
-        "link_15.0_tip",
-        "link_15.0_tip",
-        "link_7.0_tip",
-        "link_7.0_tip",
-        "link_11.0_tip",
-        "link_15.0_tip",
-        "link_3.0_tip",
-        "link_7.0_tip",
-        "link_11.0_tip",
-    ]
-    target_link_human_indices = np.array([[8, 12, 16, 12, 16, 16, 0, 0, 0, 0], [4, 4, 4, 8, 8, 12, 4, 8, 12, 16]])
-
-    def __init__(
-        self,
-        robot: sapien.Articulation,
-        target_joint_names: List[str],
-        # DexPilot parameters
-        gamma=2.5e-3,
-        project_dist=0.03,
-        escape_dist=0.05,
-        eta1=1e-4,
-        eta2=3e-2,
-        scaling=2.0,
-    ):
-        super().__init__(robot, target_joint_names, gamma, project_dist, escape_dist, eta1, eta2)
-        self.scaling = scaling

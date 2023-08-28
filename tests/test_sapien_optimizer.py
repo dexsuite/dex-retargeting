@@ -79,7 +79,7 @@ class TestVectorOptimizer:
 
         tac = time()
         print(f"Mean optimization position error: {np.mean(errors['pos'])}")
-        print(f"Retargeting computation takes {tac - tic}s for {num_optimization} times")
+        print(f"Retargeting computation for {robot_name.name} takes {tac - tic}s for {num_optimization} times")
         assert np.mean(errors["pos"]) < 1e-2
 
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
@@ -124,10 +124,10 @@ class TestVectorOptimizer:
 
         tac = time()
         print(f"Mean optimization vector error: {np.mean(errors['pos'])}")
-        print(f"Retargeting computation takes {tac - tic}s for {num_optimization} times")
+        print(f"Retargeting computation for {robot_name.name} takes {tac - tic}s for {num_optimization} times")
         assert np.mean(errors["pos"]) < 1e-2
 
-    @pytest.mark.parametrize("robot_name", ROBOT_NAMES[:1])
+    @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
     @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
     def test_dexpilot_optimizer(self, robot_name, hand_type):
         config_path = get_config_path(robot_name, RetargetingType.dexpilot, hand_type)
@@ -169,5 +169,5 @@ class TestVectorOptimizer:
 
         tac = time()
         print(f"Mean optimization vector error for DexPilot retargeting: {np.mean(errors['pos'])}")
-        print(f"Retargeting computation takes {tac - tic}s for {num_optimization} times")
+        print(f"Retargeting computation for {robot_name.name} takes {tac - tic}s for {num_optimization} times")
         assert np.mean(errors["pos"]) < 1e-2

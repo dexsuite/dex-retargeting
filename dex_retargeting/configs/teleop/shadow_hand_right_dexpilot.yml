@@ -1,0 +1,13 @@
+retargeting:
+  type: DexPilot
+  urdf_path: shadow_hand/shadow_hand_right.urdf
+  use_camera_frame_retargeting: False
+
+  # Target refers to the retargeting target, which is the robot hand
+  target_joint_names: null
+  wrist_link_name: "palm"
+  finger_tip_link_names: [ "thtip", "fftip", "mftip", "rftip", "lftip" ]
+  scaling_factor: 1.2
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  low_pass_alpha: 0.2
