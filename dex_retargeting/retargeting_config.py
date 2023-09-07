@@ -92,7 +92,7 @@ class RetargetingConfig:
         self.urdf_path = str(urdf_path)
 
     @classmethod
-    def set_default_urdf_dir(cls, urdf_dir):
+    def set_default_urdf_dir(cls, urdf_dir: Union[str, Path]):
         path = Path(urdf_dir)
         if not path.exists():
             raise ValueError(f"URDF dir {urdf_dir} not exists.")
@@ -132,7 +132,10 @@ class RetargetingConfig:
         temp_path = f"{temp_dir}/{urdf_name}"
         robot_urdf.write_xml_file(temp_path)
         sapien_model = SAPIENKinematicsModelStandalone(
-            temp_path, add_dummy_rotation=self.add_dummy_free_joint, scene=scene
+            temp_path,
+            add_dummy_translation=self.add_dummy_free_joint,
+            add_dummy_rotation=self.add_dummy_free_joint,
+            scene=scene,
         )
         robot = sapien_model.robot
         joint_names = (

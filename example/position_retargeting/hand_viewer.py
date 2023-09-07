@@ -36,13 +36,13 @@ def compute_smooth_shading_normal_np(vertices, indices):
     return vertex_normal
 
 
-class DatasetSAPIENViewer:
-    def __init__(self, headless=False, ray_tracing=False):
+class HandDatasetSAPIENViewer:
+    def __init__(self, headless=False, use_ray_tracing=False):
         # Setup
         engine = sapien.Engine()
         engine.set_log_level("warning")
 
-        if ray_tracing:
+        if use_ray_tracing:
             sapien.render_config.camera_shader_dir = "rt"
             sapien.render_config.viewer_shader_dir = "rt"
             sapien.render_config.rt_samples_per_pixel = 32
@@ -125,14 +125,14 @@ class DatasetSAPIENViewer:
         self.mano_layer: Optional[MANOLayer] = None
         self.mano_face: Optional[np.ndarray] = None
         self.camera_pose: Optional[sapien.Pose] = None
-        self.actors: List[sapien.Actor] = []
+        self.objects: List[sapien.ActorStatic] = []
         self.nodes: List[R.Node] = []
 
     def clear_all(self):
-        for actor in self.actors:
+        for actor in self.objects:
             self.scene.remove_actor(actor)
-        for _ in range(len(self.actors)):
-            actor = self.actors.pop()
+        for _ in range(len(self.objects)):
+            actor = self.objects.pop()
             self.scene.remove_actor(actor)
         self.clear_node()
         self.mano_layer = None
@@ -158,7 +158,7 @@ class DatasetSAPIENViewer:
         builder = self.scene.create_actor_builder()
         builder.add_visual_from_file(ycb_mesh_file)
         actor = builder.build_static(name=YCB_CLASSES[ycb_id])
-        self.actors.append(actor)
+        self.objects.append(actor)
 
     def _compute_hand_geometry(self, hand_pose_frame, use_camera_frame=False):
         # pose parameters all zero, no hand is detected
@@ -191,7 +191,7 @@ class DatasetSAPIENViewer:
         obj.transparency = 0
         self.nodes.append(node)
 
-    def render_data_frames(self, data: Dict, fps=10):
+    def render_dexycb_data(self, data: Dict, fps=10):
         if not self.gui:
             raise RuntimeError(f"Could not render data frames when the gui is disabled.")
         hand_pose = data["hand_pose"]
@@ -205,10 +205,10 @@ class DatasetSAPIENViewer:
             vertex, _ = self._compute_hand_geometry(hand_pose_frame)
             if vertex is not None:
                 self._update_hand(vertex)
-            for k in range(len(self.actors)):
+            for k in range(len(self.objects)):
                 pos_quat = object_pose_frame[k]
                 pose = self.camera_pose * sapien.Pose(pos_quat[4:], np.concatenate([pos_quat[3:4], pos_quat[:3]]))
-                self.actors[k].set_pose(pose)
+                self.objects[k].set_pose(pose)
             self.scene.update_render()
             for _ in range(step_per_frame):
                 self.viewer.render()
