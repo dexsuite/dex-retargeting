@@ -27,13 +27,13 @@ pip3 install -e ".[example]"
 1. **Generate the robot joint pose trajectory from our pre-recorded video.**
 
 ```shell
-export PYTHONPATH=$PYTHONPATH:`pwd`
-python3 example/vector_retargeting/detect_from_video.py \
+cd example/vector_retargeting
+python3 detect_from_video.py \
   --robot-name allegro \
-  --video-path example/vector_retargeting/data/human_hand_video.mp4 \
+  --video-path data/human_hand_video.mp4 \
   --retargeting-type vector \
   --hand-type right \
-  --output-path example/vector_retargeting/data/allegro_joints.pkl 
+  --output-path data/allegro_joints.pkl 
 ```
 
 This command will output the joint trajectory as a pickle file at the `output_path`.
@@ -44,16 +44,15 @@ options, refer to the help information. Note that the time cost here includes bo
 and the hand pose retargeting in single process mode.
 
 ```shell
-python3 example/vector_retargeting/detect_from_video.py --help
+python3 detect_from_video.py --help
 ```
 
 2. **Utilize the pickle file to produce a video of the robot**
 
 ```shell
-export PYTHONPATH=$PYTHONPATH:`pwd`
-python3 example/vector_retargeting/render_robot_hand.py \
-  --pickle-path example/vector_retargeting/data/allegro_joints.pkl \
-  --output-video-path example/vector_retargeting/data/retargeted_allegro.mp4 \
+python3 render_robot_hand.py \
+  --pickle-path data/allegro_joints.pkl \
+  --output-video-path data/retargeted_allegro.mp4 \
   --headless
 ```
 
@@ -62,8 +61,7 @@ This command uses the data saved from the previous step to create a rendered vid
 3. **Record a video of your own hand**
 
 ```bash
-export PYTHONPATH=$PYTHONPATH:$(pwd)
-python3 example/vector_retargeting/capture_webcam.py --video-path example/vector_retargeting/data/my_human_hand_video.mp4
+python3 capture_webcam.py --video-path example/vector_retargeting/data/my_human_hand_video.mp4
 
 ```
 
