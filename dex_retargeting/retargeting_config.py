@@ -73,7 +73,7 @@ class RetargetingConfig:
             if self.target_link_names is None:
                 raise ValueError(f"Position retargeting requires: target_link_names")
             self.target_link_human_indices = self.target_link_human_indices.squeeze()
-            if self.target_link_human_indices.shape != (len(self.target_link_human_indices),):
+            if self.target_link_human_indices.shape != (len(self.target_link_names),):
                 raise ValueError(f"Position retargeting link names and link indices dim mismatch")
             if self.target_link_human_indices is None:
                 raise ValueError(f"Position retargeting requires: target_link_human_indices")

@@ -83,7 +83,7 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
             for ycb_id, ycb_mesh_file in zip(ycb_ids, ycb_mesh_files):
                 self._load_ycb_object(ycb_id, ycb_mesh_file)
 
-    def render_dexycb_data(self, data: Dict, fps=5, y_offset=0.3):
+    def render_dexycb_data(self, data: Dict, fps=5, y_offset=0.5):
         hand_pose = data["hand_pose"]
         object_pose = data["object_pose"]
         num_frame = hand_pose.shape[0]
@@ -92,7 +92,10 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
         pose_offsets = []
 
         for i in range(len(self.robots) + 1):
-            pose_offsets.append(sapien.Pose([0, -y_offset * i, 0]))
+            pose = sapien.Pose([0, -y_offset * i, 0])
+            pose_offsets.append(pose)
+            if i >= 1:
+                self.robots[i - 1].set_pose(pose)
 
         # Skip frames where human hand is not detected in DexYCB dataset
         start_frame = 0
@@ -133,3 +136,4 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
                 self.viewer.render()
 
         self.viewer.toggle_pause(True)
+        self.viewer.render()

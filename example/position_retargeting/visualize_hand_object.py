@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import tyro
 
@@ -26,7 +26,8 @@ def viz_hand_object(robots: Optional[Tuple[RobotName]], data_root: Path, fps: in
     viewer.render_dexycb_data(sampled_data, fps)
 
 
-def main(dexycb_dir: str, robots: Optional[Tuple[RobotName]] = (), fps: int = 5):
+def main(dexycb_dir: str, robots: Optional[List[RobotName]] = None, fps: int = 5):
+    print(robots)
     data_root = Path(dexycb_dir).absolute()
     robot_dir = Path(__file__).parent.parent.parent / "assets" / "robots"
     RetargetingConfig.set_default_urdf_dir(robot_dir)

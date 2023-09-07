@@ -41,7 +41,7 @@ class TestSapienOptimizer:
 
         return random_qpos, init_qpos, random_target_pos
 
-    @pytest.mark.parametrize("robot_name", ROBOT_NAMES[:1])
+    @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
     @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
     def test_position_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.position, hand_type)
