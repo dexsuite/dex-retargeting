@@ -76,7 +76,7 @@ def main(
     """
 
     config_path = get_default_config_path(robot_name, retargeting_type, hand_type)
-    robot_dir = Path(__file__).parent.parent / "assets" / "robots"
+    robot_dir = Path(__file__).parent.parent.parent / "assets" / "robots"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
     retargeting = RetargetingConfig.load_from_file(config_path).build()
     retarget_video(retargeting, video_path, output_path, str(config_path))

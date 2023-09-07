@@ -124,7 +124,7 @@ def main(
             By default, it is set to None, implying no video will be saved.
         headless: Set to visualize the rendering on the screen by opening the viewer window.
     """
-    robot_dir = Path(__file__).parent.parent / "assets" / "robots"
+    robot_dir = Path(__file__).parent.parent.parent / "assets" / "robots"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
     supported_renderer = ["sapien", "sim_web_visualizer", "trimesh"]
 
