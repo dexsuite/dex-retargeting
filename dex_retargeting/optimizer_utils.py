@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import sapien.core as sapien
 from sapien.core import Pose
@@ -93,9 +95,15 @@ def add_dummy_free_joint(
 
 
 class SAPIENKinematicsModelStandalone:
-    def __init__(self, urdf_path, add_dummy_translation=False, add_dummy_rotation=False):
-        self.engine = sapien.Engine()
-        self.scene = self.engine.create_scene()
+    def __init__(
+        self, urdf_path, add_dummy_translation=False, add_dummy_rotation=False, scene: Optional[sapien.Scene] = None
+    ):
+        if scene is None:
+            self.engine = sapien.Engine()
+            self.scene = self.engine.create_scene()
+        else:
+            self.scene = scene
+            self.engine = self.scene.engine
         loader = self.scene.create_urdf_loader()
 
         builder = loader.load_file_as_articulation_builder(urdf_path)
@@ -105,7 +113,6 @@ class SAPIENKinematicsModelStandalone:
         self.robot = builder.build(fix_root_link=True)
         self.robot.set_pose(sapien.Pose())
         self.robot.set_qpos(np.zeros(self.robot.dof))
-        self.scene.step()
 
     def release(self):
         self.scene = None

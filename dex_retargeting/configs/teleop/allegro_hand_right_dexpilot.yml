@@ -1,7 +1,6 @@
 retargeting:
   type: DexPilot
   urdf_path: allegro_hand/allegro_hand_right.urdf
-  use_camera_frame_retargeting: False
 
   # Target refers to the retargeting target, which is the robot hand
   target_joint_names: null

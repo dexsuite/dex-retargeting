@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import sapien.core as sapien
 
-from dex_retargeting.constants import ROBOT_NAMES, get_config_path, RetargetingType, HandType
+from dex_retargeting.constants import ROBOT_NAMES, get_default_config_path, RetargetingType, HandType
 from dex_retargeting.optimizer import VectorOptimizer, PositionOptimizer
 from dex_retargeting.retargeting_config import RetargetingConfig
 
@@ -44,7 +44,7 @@ class TestSapienOptimizer:
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES[:1])
     @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
     def test_position_optimizer(self, robot_name, hand_type):
-        config_path = get_config_path(robot_name, RetargetingType.position, hand_type)
+        config_path = get_default_config_path(robot_name, RetargetingType.position, hand_type)
 
         # Note: The parameters below are adjusted solely for this test
         # The smoothness penalty is deactivated here, meaning no low pass filter and no continuous joint value
@@ -83,7 +83,7 @@ class TestSapienOptimizer:
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
     @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
     def test_vector_optimizer(self, robot_name, hand_type):
-        config_path = get_config_path(robot_name, RetargetingType.vector, hand_type)
+        config_path = get_default_config_path(robot_name, RetargetingType.vector, hand_type)
 
         # Note: The parameters below are adjusted solely for this test
         # For retargeting from human to robot, their values should remain the default in the retargeting config
@@ -128,7 +128,7 @@ class TestSapienOptimizer:
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
     @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
     def test_dexpilot_optimizer(self, robot_name, hand_type):
-        config_path = get_config_path(robot_name, RetargetingType.dexpilot, hand_type)
+        config_path = get_default_config_path(robot_name, RetargetingType.dexpilot, hand_type)
 
         # Note: The parameters below are adjusted solely for this test
         # For retargeting from human to robot, their values should remain the default in the retargeting config

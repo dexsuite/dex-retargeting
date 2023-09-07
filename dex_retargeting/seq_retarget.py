@@ -11,12 +11,10 @@ class SeqRetargeting:
         self,
         optimizer: Optimizer,
         has_joint_limits=True,
-        use_camera_frame_retargeting=False,
         lp_filter: Optional[LPFilter] = None,
     ):
         self.optimizer = optimizer
         robot = self.optimizer.robot
-        self.use_camera_frame_retargeting = use_camera_frame_retargeting
 
         # Joint limit
         self.has_joint_limits = has_joint_limits

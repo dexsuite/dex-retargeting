@@ -5,7 +5,7 @@ import cv2
 import tqdm
 import tyro
 
-from dex_retargeting.constants import RobotName, RetargetingType, HandType, get_config_path
+from dex_retargeting.constants import RobotName, RetargetingType, HandType, get_default_config_path
 from dex_retargeting.retargeting_config import RetargetingConfig
 from dex_retargeting.seq_retarget import SeqRetargeting
 from single_hand_detector import SingleHandDetector
@@ -75,7 +75,7 @@ def main(
             to another left robot hand, and the same applies for the right hand.
     """
 
-    config_path = get_config_path(robot_name, retargeting_type, hand_type)
+    config_path = get_default_config_path(robot_name, retargeting_type, hand_type)
     robot_dir = Path(__file__).parent.parent / "assets" / "robots"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
     retargeting = RetargetingConfig.load_from_file(config_path).build()

@@ -1,3 +1,4 @@
+import sapien.core as sapien
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Dict
@@ -14,7 +15,7 @@ from dex_retargeting.seq_retarget import SeqRetargeting
 class RetargetingConfig:
     type: str
     urdf_path: str
-    use_camera_frame_retargeting: bool
+    add_dummy_free_joint: bool = False
 
     # Source refers to the retargeting input, which usually corresponds to the human hand
     # The joint indices of human hand joint which corresponds to each link in the target_link_names
@@ -114,7 +115,7 @@ class RetargetingConfig:
             config = RetargetingConfig(**cfg)
         return config
 
-    def build(self) -> SeqRetargeting:
+    def build(self, scene: Optional[sapien.Scene] = None) -> SeqRetargeting:
         from dex_retargeting.optimizer import (
             VectorOptimizer,
             PositionOptimizer,
@@ -130,7 +131,9 @@ class RetargetingConfig:
         temp_dir = tempfile.mkdtemp(prefix="teleop-")
         temp_path = f"{temp_dir}/{urdf_name}"
         robot_urdf.write_xml_file(temp_path)
-        sapien_model = SAPIENKinematicsModelStandalone(temp_path, add_dummy_rotation=self.use_camera_frame_retargeting)
+        sapien_model = SAPIENKinematicsModelStandalone(
+            temp_path, add_dummy_rotation=self.add_dummy_free_joint, scene=scene
+        )
         robot = sapien_model.robot
         joint_names = (
             self.target_joint_names
@@ -176,7 +179,6 @@ class RetargetingConfig:
         retargeting = SeqRetargeting(
             optimizer,
             has_joint_limits=self.has_joint_limits,
-            use_camera_frame_retargeting=self.use_camera_frame_retargeting,
             lp_filter=lp_filter,
         )
         # TODO: hack here for SAPIEN
