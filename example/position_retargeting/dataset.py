@@ -12,83 +12,98 @@ import numpy as np
 import yaml
 
 _SUBJECTS = [
-    '20200709-subject-01',
-    '20200813-subject-02',
-    '20200820-subject-03',
-    '20200903-subject-04',
-    '20200908-subject-05',
-    '20200918-subject-06',
-    '20200928-subject-07',
-    '20201002-subject-08',
-    '20201015-subject-09',
-    '20201022-subject-10',
+    "20200709-subject-01",
+    "20200813-subject-02",
+    "20200820-subject-03",
+    "20200903-subject-04",
+    "20200908-subject-05",
+    "20200918-subject-06",
+    "20200928-subject-07",
+    "20201002-subject-08",
+    "20201015-subject-09",
+    "20201022-subject-10",
 ]
 
 YCB_CLASSES = {
-    1: '002_master_chef_can',
-    2: '003_cracker_box',
-    3: '004_sugar_box',
-    4: '005_tomato_soup_can',
-    5: '006_mustard_bottle',
-    6: '007_tuna_fish_can',
-    7: '008_pudding_box',
-    8: '009_gelatin_box',
-    9: '010_potted_meat_can',
-    10: '011_banana',
-    11: '019_pitcher_base',
-    12: '021_bleach_cleanser',
-    13: '024_bowl',
-    14: '025_mug',
-    15: '035_power_drill',
-    16: '036_wood_block',
-    17: '037_scissors',
-    18: '040_large_marker',
-    19: '051_large_clamp',
-    20: '052_extra_large_clamp',
-    21: '061_foam_brick',
+    1: "002_master_chef_can",
+    2: "003_cracker_box",
+    3: "004_sugar_box",
+    4: "005_tomato_soup_can",
+    5: "006_mustard_bottle",
+    6: "007_tuna_fish_can",
+    7: "008_pudding_box",
+    8: "009_gelatin_box",
+    9: "010_potted_meat_can",
+    10: "011_banana",
+    11: "019_pitcher_base",
+    12: "021_bleach_cleanser",
+    13: "024_bowl",
+    14: "025_mug",
+    15: "035_power_drill",
+    16: "036_wood_block",
+    17: "037_scissors",
+    18: "040_large_marker",
+    19: "051_large_clamp",
+    20: "052_extra_large_clamp",
+    21: "061_foam_brick",
 }
 
 _MANO_JOINTS = [
-    'wrist',
-    'thumb_mcp',
-    'thumb_pip',
-    'thumb_dip',
-    'thumb_tip',
-    'index_mcp',
-    'index_pip',
-    'index_dip',
-    'index_tip',
-    'middle_mcp',
-    'middle_pip',
-    'middle_dip',
-    'middle_tip',
-    'ring_mcp',
-    'ring_pip',
-    'ring_dip',
-    'ring_tip',
-    'little_mcp',
-    'little_pip',
-    'little_dip',
-    'little_tip'
+    "wrist",
+    "thumb_mcp",
+    "thumb_pip",
+    "thumb_dip",
+    "thumb_tip",
+    "index_mcp",
+    "index_pip",
+    "index_dip",
+    "index_tip",
+    "middle_mcp",
+    "middle_pip",
+    "middle_dip",
+    "middle_tip",
+    "ring_mcp",
+    "ring_pip",
+    "ring_dip",
+    "ring_tip",
+    "little_mcp",
+    "little_pip",
+    "little_dip",
+    "little_tip",
 ]
 
 _MANO_JOINT_CONNECT = [
-    [0, 1], [1, 2], [2, 3], [3, 4],
-    [0, 5], [5, 6], [6, 7], [7, 8],
-    [0, 9], [9, 10], [10, 11], [11, 12],
-    [0, 13], [13, 14], [14, 15], [15, 16],
-    [0, 17], [17, 18], [18, 19], [19, 20],
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [0, 5],
+    [5, 6],
+    [6, 7],
+    [7, 8],
+    [0, 9],
+    [9, 10],
+    [10, 11],
+    [11, 12],
+    [0, 13],
+    [13, 14],
+    [14, 15],
+    [15, 16],
+    [0, 17],
+    [17, 18],
+    [18, 19],
+    [19, 20],
 ]
 
 _SERIALS = [
-    '836212060125',
-    '839512060362',
-    '840412060917',
-    '841412060263',
-    '932122060857',
-    '932122060861',
-    '932122061900',
-    '932122062010',
+    "836212060125",
+    "839512060362",
+    "840412060917",
+    "841412060263",
+    "932122060857",
+    "932122060861",
+    "932122061900",
+    "932122062010",
 ]
 
 _BOP_EVAL_SUBSAMPLING_FACTOR = 4
@@ -176,9 +191,16 @@ class DexYCBVideoDataset:
             object_pose = object_pose[frame_indices][:, capture_filter, :]
         object_mesh_files = [self._object_mesh_file(ycb_id) for ycb_id in ycb_ids]
 
-        data = dict(hand_pose=hand_pose, object_pose=object_pose, extrinsics=extrinsic_mat, ycb_ids=ycb_ids,
-                    hand_shape=mano_parameters, object_mesh_file=object_mesh_files, capture_name=capture_name)
-        return data
+        ycb_data = dict(
+            hand_pose=hand_pose,
+            object_pose=object_pose,
+            extrinsics=extrinsic_mat,
+            ycb_ids=ycb_ids,
+            hand_shape=mano_parameters,
+            object_mesh_file=object_mesh_files,
+            capture_name=capture_name,
+        )
+        return ycb_data
 
     def _filter_object_motion_frame(self, capture_filter, object_pose, frame_margin=40):
         frames = np.arange(0)
@@ -216,7 +238,7 @@ class DexYCBVideoDataset:
             if not cali_dir.stem.startswith("extrinsics"):
                 continue
             extrinsic_file = cali_dir / "extrinsics.yml"
-            name = cali_dir.stem[len("extrinsics_"):]
+            name = cali_dir.stem[len("extrinsics_") :]
             with extrinsic_file.open(mode="r") as f:
                 extrinsic = yaml.load(f, Loader=yaml.FullLoader)
             extrinsics[name] = extrinsic
@@ -227,7 +249,7 @@ class DexYCBVideoDataset:
                 intrinsic = yaml.load(f, Loader=yaml.FullLoader)
             name = intrinsic_file.stem.split("_")[0]
             x = intrinsic["color"]
-            camera_mat = np.array([[x['fx'], 0.0, x['ppx']], [0.0, x['fy'], x['ppy']], [0.0, 0.0, 1.0]])
+            camera_mat = np.array([[x["fx"], 0.0, x["ppx"]], [0.0, x["fy"], x["ppy"]], [0.0, 0.0, 1.0]])
             intrinsics[name] = camera_mat
 
         return intrinsics, extrinsics
@@ -247,7 +269,7 @@ class DexYCBVideoDataset:
         return mano_parameters
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from collections import Counter
 
     data_root = os.environ["DEX_YCB_DIR"] if "DEX_YCB_DIR" in os.environ else str(Path.home() / "data" / "dex_ycb")
