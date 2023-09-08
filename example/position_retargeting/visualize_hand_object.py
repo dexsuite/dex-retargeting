@@ -13,7 +13,7 @@ from dex_retargeting.retargeting_config import RetargetingConfig
 
 def viz_hand_object(robots: Optional[Tuple[RobotName]], data_root: Path, fps: int):
     dataset = DexYCBVideoDataset(data_root)
-    if len(robots) == 0:
+    if robots is None:
         viewer = HandDatasetSAPIENViewer(headless=False)
     else:
         viewer = RobotHandDatasetSAPIENViewer(list(robots), HandType.right, headless=False)

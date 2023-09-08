@@ -1,15 +1,16 @@
-## Generate Robot Motion from DexYCB dataset
+## Retarget Robot Motion from Hand Object Pose Dataset
 
-### Prepare DexYCB Dataset
+### Setting up DexYCB Dataset
 
-This example shows that how to leverage the fantastic DexYCB dataset to generate robot motion trajectory.
-[DexYCB](https://dex-ycb.github.io/) is a hand-object dataset made by NVIDIA. To run this demo, you need to download at
-least one compressed files following the [original instruction](https://dex-ycb.github.io).
+This example illustrates how you can utilize the impressive DexYCB dataset to create a robot motion trajectory.
+The [DexYCB](https://dex-ycb.github.io/) is a hand-object dataset developed by NVIDIA.
+To execute this demonstration, you need to download at least one compressed file as per
+the [official guidelines ↗](https://dex-ycb.github.io).
 
-Now we use the subset `20200709-subject-01.tar.gz` from DexYCB as an example.
+In this case, we will be using the `20200709-subject-01.tar.gz` subset from DexYCB.
 
-1. Download `20200709-subject-01.tar.gz` and place in it somewhere.
-2. Download `models` and `calibration`, and place them next to the `20200709-subject-01.tar.gz`.
+1. Download `20200709-subject-01.tar.gz` and store it in a suitable location.
+2. Download `models` and `calibration`, and keep them alongside the `20200709-subject-01.tar.gz`.
 
 ```Log
 ├── 20200709-subject-01
@@ -17,26 +18,28 @@ Now we use the subset `20200709-subject-01.tar.gz` from DexYCB as an example.
 └── models
 ```
 
-3. Check the download data using `dataset.py`. It will print the number of frames for each object.
+3. Verify the downloaded data using `dataset.py`. It will display the trajectory count for each object.
+   The `PATH_TO_YOUR_DEXYCB_DIR_ROOT` should be the directory containing the three subfolders from the previous step
 
 ```shell
-export DEX_YCB_DIR=/path/to/dex-ycb # which contains the three calibration and models directory
-python3 dataset.py
+cd example/position_retargeting
+python dataset.py --dexycb-dir=PATH_TO_YOUR_DEXYCB_DIR_ROOT
 ```
 
-### Install manopth
+### Setting up manopth
 
-Here we install the manopth in the same way as [dex-ycb-toolkit](https://github.com/NVlabs/dex-ycb-toolkit).
+Now, we will set up manopth similar to how it is done in [dex-ycb-toolkit](https://github.com/NVlabs/dex-ycb-toolkit).
 
-1. Download manopth in this directory, the manopth should locate at `dex-robot-zoo/example/dex_ycb`
+1. Download manopth in this directory, the manopth should be located
+   at `dex_retargeting/example/position_retargeting/dex_ycb`
 
     ```shell
     git clone https://github.com/hassony2/manopth
-    pip3 install chumpy opencv-python # install manopth dep
+    pip3 install chumpy opencv-python # install manopth dependencies
     ```
 
-2. Download MANO models and local install manopth
-   Download MANO models and code (`mano_v1_2.zip`) from the [MANO website](https://mano.is.tue.mpg.de) and place it
+2. Download MANO models and locally install manopth
+   Download MANO models and code (`mano_v1_2.zip`) from the [MANO website ↗](https://mano.is.tue.mpg.de) and place it
    inside `manopth`.
 
     ```shell
@@ -47,26 +50,27 @@ Here we install the manopth in the same way as [dex-ycb-toolkit](https://github.
     ln -s ../mano_v1_2/models models
     ```
 
-### Visualize interaction between human hand and object
-
-Without retargeting, we can first visualize the original dataset in SAPIEN viewer. The hand mesh is computed via
-manopth/
+### Installing Additional Python Dependencies
 
 ```shell
-python3 visualize_hand_object.py --mode human
-# Press q to quit viewer
+pip install tyro pyyaml
 ```
 
-### Visualize interaction between robot hand and object
+### Visualizing Human Hand-Object Interaction
+
+Before proceeding to retargeting, we can first visualize the original dataset in SAPIEN viewer. The hand mesh is
+computed via manopth/
 
 ```shell
-python3 visualize_hand_object.py --mode adroit # for one robot
-python3 visualize_hand_object.py --mode allegro # for multiple robot
-# Press q to quit viewer
+python3 visualize_hand_object.py --dexycb-dir=PATH_TO_YOUR_DEXYCB_DIR_ROOT
+# Press q to exit viewer
 ```
 
+### Visualizing Robot Hand-Object Interaction
 
+Visualize the retargeting results for multiple robot hands along with the human hand.
 
-
-
-
+```shell
+python3 visualize_hand_object.py --dexycb-dir=PATH_TO_YOUR_DEXYCB_DIR_ROOT --robots allegro shadow svh
+# Press q to exit viewer
+```

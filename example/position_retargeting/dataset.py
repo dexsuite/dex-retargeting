@@ -5,7 +5,6 @@
 
 """DexYCB dataset."""
 
-import os
 from pathlib import Path
 
 import numpy as np
@@ -110,7 +109,7 @@ _BOP_EVAL_SUBSAMPLING_FACTOR = 4
 
 
 class DexYCBVideoDataset:
-    def __init__(self, data_dir, mano_side="right", filter_objects=[]):
+    def __init__(self, data_dir, hand_type="right", filter_objects=[]):
         self._data_dir = Path(data_dir)
         self._calib_dir = self._data_dir / "calibration"
         self._model_dir = self._data_dir / "models"
@@ -128,7 +127,7 @@ class DexYCBVideoDataset:
 
         # Camera and mano
         self._intrinsics, self._extrinsics = self._load_camera_parameters()
-        self._mano_side = mano_side
+        self._mano_side = hand_type
         self._mano_parameters = self._load_mano()
 
         # Capture data
@@ -143,7 +142,7 @@ class DexYCBVideoDataset:
                 with meta_file.open(mode="r") as f:
                     meta = yaml.load(f, Loader=yaml.FullLoader)
 
-                if mano_side not in meta["mano_sides"]:
+                if hand_type not in meta["mano_sides"]:
                     continue
 
                 pose = np.load((capture_dir / "pose.npz").resolve().__str__())
@@ -269,11 +268,10 @@ class DexYCBVideoDataset:
         return mano_parameters
 
 
-if __name__ == "__main__":
+def main(dexycb_dir: str):
     from collections import Counter
 
-    data_root = os.environ["DEX_YCB_DIR"] if "DEX_YCB_DIR" in os.environ else str(Path.home() / "data" / "dex_ycb")
-    dataset = DexYCBVideoDataset(str(Path.home() / "data" / "dex_ycb"))
+    dataset = DexYCBVideoDataset(dexycb_dir)
     print(len(dataset))
 
     ycb_names = []
@@ -286,3 +284,9 @@ if __name__ == "__main__":
 
     sample = dataset[0]
     print(sample.keys())
+
+
+if __name__ == "__main__":
+    import tyro
+
+    tyro.cli(main)

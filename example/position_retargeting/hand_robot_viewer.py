@@ -83,7 +83,13 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
             for ycb_id, ycb_mesh_file in zip(ycb_ids, ycb_mesh_files):
                 self._load_ycb_object(ycb_id, ycb_mesh_file)
 
-    def render_dexycb_data(self, data: Dict, fps=5, y_offset=0.5):
+    def render_dexycb_data(self, data: Dict, fps=5, y_offset=0.8):
+        # Set table and viewer pose for better visual effect only
+        global_y_offset = -y_offset * len(self.robots) / 2
+        self.table.set_pose(sapien.Pose([0.5, global_y_offset, 0]))
+        if self.viewer is not None:
+            self.viewer.set_camera_xyz(1.5, global_y_offset, 1)
+
         hand_pose = data["hand_pose"]
         object_pose = data["object_pose"]
         num_frame = hand_pose.shape[0]

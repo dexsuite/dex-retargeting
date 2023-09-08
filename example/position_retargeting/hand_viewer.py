@@ -111,8 +111,8 @@ class HandDatasetSAPIENViewer:
         builder.add_box_visual(
             sapien.Pose([-0.4, -1.9, -0.51]), half_size=np.array([0.015, 0.015, 0.49]), material=white_diffuse
         )
-        table = builder.build_static(name="table")
-        table.set_pose(sapien.Pose([0.5, 0, 0]))
+        self.table = builder.build_static(name="table")
+        self.table.set_pose(sapien.Pose([0.5, 0, 0]))
 
         # Caches
         self.engine = engine
@@ -212,4 +212,6 @@ class HandDatasetSAPIENViewer:
             self.scene.update_render()
             for _ in range(step_per_frame):
                 self.viewer.render()
+
+        self.viewer.render()
         self.viewer.toggle_pause(True)
