@@ -15,11 +15,15 @@ from dex_retargeting.seq_retarget import SeqRetargeting
 class RetargetingConfig:
     type: str
     urdf_path: str
+
+    # The link on the robot hand which corresponding to the wrist of human hand
+    wrist_link_name: str
+
+    # Whether to add free joint to the root of the robot. Free joint enable the robot hand move freely in the space
     add_dummy_free_joint: bool = False
 
     # Source refers to the retargeting input, which usually corresponds to the human hand
     # The joint indices of human hand joint which corresponds to each link in the target_link_names
-
     target_link_human_indices: Optional[np.ndarray] = None
 
     # Position retargeting link names
@@ -32,7 +36,6 @@ class RetargetingConfig:
 
     # DexPilot retargeting link names
     finger_tip_link_names: Optional[List[str]] = None
-    wrist_link_name: Optional[str] = None
 
     # Scaling factor for vector retargeting only
     # For example, Allegro is 1.6 times larger than normal human hand, then this scaling factor should be 1.6
@@ -128,7 +131,7 @@ class RetargetingConfig:
         # Process the URDF with yourdfpy to better find file path
         robot_urdf = urdf.URDF.load(self.urdf_path)
         urdf_name = self.urdf_path.split("/")[-1]
-        temp_dir = tempfile.mkdtemp(prefix="teleop-")
+        temp_dir = tempfile.mkdtemp(prefix="dex_retargeting-")
         temp_path = f"{temp_dir}/{urdf_name}"
         robot_urdf.write_xml_file(temp_path)
         sapien_model = SAPIENKinematicsModelStandalone(
@@ -138,6 +141,7 @@ class RetargetingConfig:
             scene=scene,
         )
         robot = sapien_model.robot
+        robot.set_name(Path(self.urdf_path).stem)
         joint_names = (
             self.target_joint_names
             if self.target_joint_names is not None
@@ -146,6 +150,7 @@ class RetargetingConfig:
         if self.type == "position":
             optimizer = PositionOptimizer(
                 robot,
+                self.wrist_link_name,
                 joint_names,
                 target_link_names=self.target_link_names,
                 target_link_human_indices=self.target_link_human_indices,
@@ -155,6 +160,7 @@ class RetargetingConfig:
         elif self.type == "vector":
             optimizer = VectorOptimizer(
                 robot,
+                self.wrist_link_name,
                 joint_names,
                 target_origin_link_names=self.target_origin_link_names,
                 target_task_link_names=self.target_task_link_names,

@@ -1,10 +1,10 @@
 retargeting:
   type: DexPilot
   urdf_path: schunk_hand/schunk_svh_hand_right.urdf
+  wrist_link_name: "right_hand_base_link"
 
   # Target refers to the retargeting target, which is the robot hand
   target_joint_names: null
-  wrist_link_name: "right_hand_base_link"
   finger_tip_link_names: [ "right_hand_c", "right_hand_t", "right_hand_s", "right_hand_r", "right_hand_q" ]
   scaling_factor: 1.2
 

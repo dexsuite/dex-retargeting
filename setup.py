@@ -15,7 +15,7 @@ with open(_here / name / "__init__.py") as f:
         raise RuntimeError("Unable to find __version__ string.")
 
 core_requirements = [
-    "numpy",
+    "numpy<1.24",
     "torch",
     "sapien>=2.0.0",
     "nlopt",
