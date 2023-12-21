@@ -29,7 +29,7 @@ def viz_hand_object(robots: Optional[Tuple[RobotName]], data_root: Path, fps: in
 def main(dexycb_dir: str, robots: Optional[List[RobotName]] = None, fps: int = 5):
     print(robots)
     data_root = Path(dexycb_dir).absolute()
-    robot_dir = Path(__file__).parent.parent.parent / "assets" / "robots"
+    robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
     RetargetingConfig.set_default_urdf_dir(robot_dir)
     if not data_root.exists():
         raise ValueError(f"Path to DexYCB dir: {data_root} does not exist.")

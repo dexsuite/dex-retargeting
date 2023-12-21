@@ -26,7 +26,7 @@ ROBOT_NAMES = list(VECTOR_CONFIG_DICT.keys())
 
 class TestRetargetingConfig:
     config_dir = Path(__file__).parent.parent / "dex_retargeting" / "configs"
-    robot_dir = Path(__file__).parent.parent / "assets" / "robots"
+    robot_dir = Path(__file__).parent.parent / "assets" / "robots" / "hands"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir.absolute()))
 
     config_paths = (
