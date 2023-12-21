@@ -43,8 +43,3 @@ python3 capture_webcam.py --video-path example/vector_retargeting/data/my_human_
 
 This command will access your webcam (which should be connected to your computer) and record the video stream in mp4
 format. To end video recording, press `q` on the keyboard.
-
-### Retargeting from hand-object pose trajectory
-
-Here we use the [DexYCB]() dataset to show that how can we retarget the human hand-object interaction trajectory to
-robot hand-object interaction trajectory. After 
