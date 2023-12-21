@@ -52,6 +52,8 @@ def render_by_sapien(
         robot.set_pose(sapien.Pose([0, 0, -0.05]))
     elif "dlr" in robot_file_name:
         robot.set_pose(sapien.Pose([0, 0, -0.08]))
+    elif "leap" in robot_file_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.1]))
     else:
         robot.set_pose(sapien.Pose([0, 0, 0.0]))
 
