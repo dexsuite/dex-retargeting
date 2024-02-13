@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import sapien.core as sapien
 
-from dex_retargeting.constants import ROBOT_NAMES, get_default_config_path, RetargetingType, HandType
+from dex_retargeting.constants import ROBOT_NAMES, get_default_config_path, RetargetingType, HandType, RobotName
 from dex_retargeting.optimizer import VectorOptimizer, PositionOptimizer
 from dex_retargeting.retargeting_config import RetargetingConfig
 
@@ -15,6 +15,8 @@ class TestSapienOptimizer:
     config_dir = Path(__file__).parent.parent / "dex_retargeting" / "configs"
     robot_dir = Path(__file__).parent.parent / "assets" / "robots" / "hands"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir.absolute()))
+    DEXPILOT_ROBOT_NAMES = ROBOT_NAMES.copy()
+    DEXPILOT_ROBOT_NAMES.remove(RobotName.ability)
 
     @staticmethod
     def generate_vector_retargeting_data_gt(robot: sapien.Articulation, optimizer: VectorOptimizer):
@@ -125,7 +127,7 @@ class TestSapienOptimizer:
         print(f"Retargeting computation for {robot_name.name} takes {tac - tic}s for {num_optimization} times")
         assert np.mean(errors["pos"]) < 1e-2
 
-    @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
+    @pytest.mark.parametrize("robot_name", DEXPILOT_ROBOT_NAMES)
     @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
     def test_dexpilot_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.dexpilot, hand_type)
