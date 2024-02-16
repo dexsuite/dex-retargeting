@@ -1,0 +1,41 @@
+name: tagged release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.8" ]
+
+    environment:
+      name: pypi
+      url: https://pypi.org/manage/project/dex-retargeting
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build wheels
+        run: pip3 install setuptools build --upgrade && python -m build -w
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: ./dist/*.whl
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
