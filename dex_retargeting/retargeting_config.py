@@ -1,7 +1,7 @@
 import sapien.core as sapien
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from typing import Union
 
 import numpy as np
@@ -44,6 +44,9 @@ class RetargetingConfig:
     # Optimization hyperparameter
     normal_delta: float = 4e-3
     huber_delta: float = 2e-2
+
+    # Constraint parameters
+    constraint_map: Optional[Dict[str, np.ndarray]] = None
 
     # Joint limit tag
     has_joint_limits: bool = True
@@ -110,12 +113,16 @@ class RetargetingConfig:
         with path.open("r") as f:
             yaml_config = yaml.load(f, Loader=yaml.FullLoader)
             cfg = yaml_config["retargeting"]
-            if "target_link_human_indices" in cfg:
-                cfg["target_link_human_indices"] = np.array(cfg["target_link_human_indices"])
-            if override is not None:
-                for key, value in override.items():
-                    cfg[key] = value
-            config = RetargetingConfig(**cfg)
+            return cls.from_dict(cfg, override)
+
+    @classmethod
+    def from_dict(cls, cfg: Dict[str, Any], override: Optional[Dict] = None):
+        if "target_link_human_indices" in cfg:
+            cfg["target_link_human_indices"] = np.array(cfg["target_link_human_indices"])
+        if override is not None:
+            for key, value in override.items():
+                cfg[key] = value
+        config = RetargetingConfig(**cfg)
         return config
 
     def build(self, scene: Optional[sapien.Scene] = None) -> SeqRetargeting:
