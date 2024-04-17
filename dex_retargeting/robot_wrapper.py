@@ -1,7 +1,8 @@
+from typing import List
+
 import numpy as np
-import pinocchio as pin
-from typing import Optional, List
 import numpy.typing as npt
+import pinocchio as pin
 
 
 class RobotWrapper:

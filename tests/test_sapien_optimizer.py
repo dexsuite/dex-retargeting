@@ -40,7 +40,9 @@ class TestSapienOptimizer:
         robot.compute_forward_kinematics(random_qpos)
 
         random_target_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.target_link_indices])
-        init_qpos = np.clip(random_qpos + np.random.randn(robot.dof) * 0.5, joint_limit[:, 0] + joint_eps  , joint_limit[:, 1] - joint_eps)
+        init_qpos = np.clip(
+            random_qpos + np.random.randn(robot.dof) * 0.5, joint_limit[:, 0] + joint_eps, joint_limit[:, 1] - joint_eps
+        )
 
         return random_qpos, init_qpos, random_target_pos
 
@@ -100,7 +102,7 @@ class TestSapienOptimizer:
 
         retargeting = config.build()
 
-        robot = retargeting.optimizer.robot
+        robot: RobotWrapper = retargeting.optimizer.robot
         optimizer = retargeting.optimizer
 
         num_optimization = 100
@@ -113,8 +115,8 @@ class TestSapienOptimizer:
 
             # Optimized vector
             computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=[], last_qpos=init_qpos[:])
-            robot.set_qpos(np.array(computed_qpos))
-            computed_pos = np.array([robot.get_links()[i].get_pose().p for i in optimizer.robot_link_indices])
+            robot.compute_forward_kinematics(computed_qpos)
+            computed_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.robot_link_indices])
             computed_origin_pos = computed_pos[optimizer.origin_link_indices]
             computed_task_pos = computed_pos[optimizer.task_link_indices]
             computed_target_vector = computed_task_pos - computed_origin_pos
@@ -145,7 +147,7 @@ class TestSapienOptimizer:
 
         retargeting = config.build()
 
-        robot = retargeting.optimizer.robot
+        robot: RobotWrapper = retargeting.optimizer.robot
         optimizer = retargeting.optimizer
 
         num_optimization = 100
@@ -158,8 +160,8 @@ class TestSapienOptimizer:
 
             # Optimized vector
             computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=[], last_qpos=init_qpos[:])
-            robot.set_qpos(np.array(computed_qpos))
-            computed_pos = np.array([robot.get_links()[i].get_pose().p for i in optimizer.robot_link_indices])
+            robot.compute_forward_kinematics(computed_qpos)
+            computed_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.robot_link_indices])
             computed_origin_pos = computed_pos[optimizer.origin_link_indices]
             computed_task_pos = computed_pos[optimizer.task_link_indices]
             computed_target_vector = computed_task_pos - computed_origin_pos
