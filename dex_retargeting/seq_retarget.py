@@ -97,14 +97,6 @@ class SeqRetargeting:
         pose_vec = np.concatenate([target_root_pose[:3, 3], euler])
 
         # Find the dummy joints
-        name_list = [
-            "dummy_x_translation_joint",
-            "dummy_y_translation_joint",
-            "dummy_z_translation_joint",
-            "dummy_x_rotation_joint",
-            "dummy_y_rotation_joint",
-            "dummy_z_rotation_joint",
-        ]
         for num, joint_name in enumerate(self.optimizer.target_joint_names):
             if joint_name in name_list:
                 index = name_list.index(joint_name)
