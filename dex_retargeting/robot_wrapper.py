@@ -66,6 +66,10 @@ class RobotWrapper:
         pose: pin.SE3 = pin.updateFramePlacement(self.model, self.data, link_id)
         return pose.homogeneous
 
+    def get_link_pose_inv(self, link_id: int) -> npt.NDArray:
+        pose: pin.SE3 = pin.updateFramePlacement(self.model, self.data, link_id)
+        return pose.inverse().homegeneous
+
     def compute_single_link_local_jacobian(self, qpos, link_id: int) -> npt.NDArray:
         J = pin.computeFrameJacobian(self.model, self.data, qpos, link_id)
         return J

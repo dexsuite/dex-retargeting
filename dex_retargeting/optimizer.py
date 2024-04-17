@@ -1,14 +1,12 @@
 from abc import abstractmethod
 from typing import List
-import numpy.typing as npt
 
 import nlopt
 import numpy as np
-
-# import sapien.core as sapien
-from dex_retargeting.robot_wrapper import RobotWrapper
-# from pytransform3d import rotations
+import numpy.typing as npt
 import torch
+
+from dex_retargeting.robot_wrapper import RobotWrapper
 
 
 class Optimizer:
@@ -455,8 +453,8 @@ class DexPilotAllegroOptimizer(Optimizer):
                     jacobians = []
                     for i, index in enumerate(self.robot_link_indices):
                         link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
-                                             :3, self.target_joint_indices
-                                             ]
+                            :3, self.target_joint_indices
+                        ]
                         link_pose = target_link_poses[i]
                         link_rot = link_pose[:3, :3]
                         link_kinematics_jacobian = link_rot @ link_body_jacobian
