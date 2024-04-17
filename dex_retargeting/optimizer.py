@@ -1,9 +1,13 @@
 from abc import abstractmethod
 from typing import List
+import numpy.typing as npt
 
 import nlopt
 import numpy as np
-import sapien.core as sapien
+
+# import sapien.core as sapien
+from dex_retargeting.robot_wrapper import RobotWrapper
+# from pytransform3d import rotations
 import torch
 
 
@@ -12,17 +16,18 @@ class Optimizer:
 
     def __init__(
         self,
-        robot: sapien.Articulation,
+        robot: RobotWrapper,
         wrist_link_name: str,
         target_joint_names: List[str],
-        target_link_human_indices: np.ndarray,
+        target_link_human_indices: npt.NDArray,
     ):
         self.robot = robot
         self.robot_dof = robot.dof
-        self.model = robot.create_pinocchio_model()
+        # self.model = robot.create_pinocchio_model()
         self.wrist_link_name = wrist_link_name
 
-        joint_names = [joint.get_name() for joint in robot.get_active_joints()]
+        joint_names = robot.active_joint_names
+        # joint_names = [joint.get_name() for joint in robot.get_active_joints()]
         target_joint_index = []
         for target_joint_name in target_joint_names:
             if target_joint_name not in joint_names:
@@ -38,10 +43,10 @@ class Optimizer:
         self.target_link_human_indices = target_link_human_indices
 
         # Free joint
-        link_names = [link.get_name() for link in self.robot.get_links()]
+        link_names = robot.link_names
         self.has_free_joint = len([name for name in link_names if "dummy" in name]) >= 6
 
-    def set_joint_limit(self, joint_limits: np.ndarray):
+    def set_joint_limit(self, joint_limits: npt.NDArray):
         if joint_limits.shape != (self.dof, 2):
             raise ValueError(f"Expect joint limits have shape: {(self.dof, 2)}, but get {joint_limits.shape}")
         self.opt.set_lower_bounds(joint_limits[:, 0].tolist())
@@ -50,20 +55,8 @@ class Optimizer:
     def get_last_result(self):
         return self.opt.last_optimize_result()
 
-    def get_link_names(self):
-        return [link.get_name() for link in self.robot.get_links()]
-
     def get_link_indices(self, target_link_names):
-        target_link_index = []
-        for target_link_name in target_link_names:
-            if target_link_name not in self.get_link_names():
-                raise ValueError(f"Body {target_link_name} given does not appear to be in robot XML.")
-            target_link_index.append(self.get_link_names().index(target_link_name))
-        return target_link_index
-
-    @abstractmethod
-    def retarget(self, ref_value, fixed_qpos, last_qpos=None):
-        pass
+        return [self.robot.get_link_index(link_name) for link_name in target_link_names]
 
     def optimize(self, objective_fn, last_qpos):
         self.opt.set_min_objective(objective_fn)
@@ -74,17 +67,21 @@ class Optimizer:
             return np.array(last_qpos)
         return qpos
 
+    @abstractmethod
+    def retarget(self, ref_value, fixed_qpos, last_qpos=None):
+        pass
+
 
 class PositionOptimizer(Optimizer):
     retargeting_type = "position"
 
     def __init__(
         self,
-        robot: sapien.Articulation,
+        robot: RobotWrapper,
         wrist_link_name: str,
         target_joint_names: List[str],
         target_link_names: List[str],
-        target_link_human_indices: np.ndarray,
+        target_link_human_indices: npt.NDArray,
         huber_delta=0.02,
         norm_delta=4e-3,
     ):
@@ -104,17 +101,17 @@ class PositionOptimizer(Optimizer):
             self.use_sparse_jacobian = False
         self.opt.set_ftol_abs(1e-5)
 
-    def _get_objective_function(self, target_pos: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
+    def _get_objective_function(self, target_pos: npt.NDArray, fixed_qpos: npt.NDArray, last_qpos: npt.NDArray):
         qpos = np.zeros(self.robot_dof)
         qpos[self.fixed_joint_indices] = fixed_qpos
         torch_target_pos = torch.as_tensor(target_pos)
         torch_target_pos.requires_grad_(False)
 
-        def objective(x: np.ndarray, grad: np.ndarray) -> float:
+        def objective(x: npt.NDArray, grad: npt.NDArray) -> float:
             qpos[self.target_joint_indices] = x
-            self.model.compute_forward_kinematics(qpos)
-            target_link_poses = [self.model.get_link_pose(index) for index in self.target_link_indices]
-            body_pos = np.array([pose.p for pose in target_link_poses])
+            self.robot.compute_forward_kinematics(qpos)
+            target_link_poses = [self.robot.get_link_pose(index) for index in self.target_link_indices]
+            body_pos = np.stack([pose[:3, 3] for pose in target_link_poses], axis=0)  # (n ,3)
 
             # Torch computation for accurate loss and grad
             torch_body_pos = torch.as_tensor(body_pos)
@@ -129,19 +126,21 @@ class PositionOptimizer(Optimizer):
                 if self.use_sparse_jacobian:
                     jacobians = []
                     for i, index in enumerate(self.target_link_indices):
-                        link_spatial_jacobian = self.model.compute_single_link_local_jacobian(qpos, index)[
+                        link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
                             :3, self.target_joint_indices
                         ]
-                        link_rot = self.model.get_link_pose(index).to_transformation_matrix()[:3, :3]
-                        link_kinematics_jacobian = link_rot @ link_spatial_jacobian
+                        link_pose = target_link_poses[i]
+                        link_rot = link_pose[:3, :3]
+                        link_kinematics_jacobian = link_rot @ link_body_jacobian
                         jacobians.append(link_kinematics_jacobian)
                     jacobians = np.stack(jacobians, axis=0)
                 else:
-                    self.model.compute_full_jacobian(qpos)
-                    jacobians = [
-                        self.model.get_link_jacobian(index, local=True)[:3, self.target_joint_indices]
-                        for index in self.target_link_indices
-                    ]
+                    raise NotImplementedError
+                    # self.model.compute_full_jacobian(qpos)
+                    # jacobians = [
+                    #     self.model.get_link_jacobian(index, local=True)[:3, self.target_joint_indices]
+                    #     for index in self.target_link_indices
+                    # ]
 
                 huber_distance.backward()
                 grad_pos = torch_body_pos.grad.cpu().numpy()[:, None, :]
@@ -167,7 +166,7 @@ class PositionOptimizer(Optimizer):
             last_qpos = last_qpos.astype(np.float32)
         last_qpos = list(last_qpos)
         objective_fn = self._get_objective_function(ref_value, fixed_qpos, np.array(last_qpos).astype(np.float32))
-        return self.optimize(objective_fn, last_qpos)
+        return np.array(self.optimize(objective_fn, last_qpos))
 
 
 class VectorOptimizer(Optimizer):
@@ -175,12 +174,12 @@ class VectorOptimizer(Optimizer):
 
     def __init__(
         self,
-        robot: sapien.Articulation,
+        robot: RobotWrapper,
         wrist_link_name: str,
         target_joint_names: List[str],
         target_origin_link_names: List[str],
         target_task_link_names: List[str],
-        target_link_human_indices: np.ndarray,
+        target_link_human_indices: npt.NDArray,
         huber_delta=0.02,
         norm_delta=4e-3,
         scaling=1.0,
@@ -211,13 +210,13 @@ class VectorOptimizer(Optimizer):
             self.use_sparse_jacobian = False
         self.opt.set_ftol_abs(1e-6)
 
-    def _get_objective_function(self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
+    def _get_objective_function(self, target_vector: npt.NDArray, fixed_qpos: npt.NDArray, last_qpos: npt.NDArray):
         qpos = np.zeros(self.robot_dof)
         qpos[self.fixed_joint_indices] = fixed_qpos
         torch_target_vec = torch.as_tensor(target_vector) * self.scaling
         torch_target_vec.requires_grad_(False)
 
-        def objective(x: np.ndarray, grad: np.ndarray) -> float:
+        def objective(x: npt.NDArray, grad: npt.NDArray) -> float:
             qpos[self.target_joint_indices] = x
             self.model.compute_forward_kinematics(qpos)
             target_link_poses = [self.model.get_link_pose(index) for index in self.robot_link_indices]
@@ -306,7 +305,7 @@ class DexPilotAllegroOptimizer(Optimizer):
 
     def __init__(
         self,
-        robot: sapien.Articulation,
+        robot: RobotWrapper,
         target_joint_names: List[str],
         finger_tip_link_names: List[str],
         wrist_link_name: str,
@@ -382,7 +381,7 @@ class DexPilotAllegroOptimizer(Optimizer):
             self.projected_dist = np.array([eta1] * 4 + [eta2] * 6)
 
     def _get_objective_function_four_finger(
-        self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray
+        self, target_vector: npt.NDArray, fixed_qpos: npt.NDArray, last_qpos: npt.NDArray
     ):
         target_vector = target_vector.astype(np.float32)
         qpos = np.zeros(self.robot_dof)
@@ -425,7 +424,7 @@ class DexPilotAllegroOptimizer(Optimizer):
         torch_target_vec = torch.as_tensor(reference_vec, dtype=torch.float32)
         torch_target_vec.requires_grad_(False)
 
-        def objective(x: np.ndarray, grad: np.ndarray) -> float:
+        def objective(x: npt.NDArray, grad: npt.NDArray) -> float:
             qpos[self.target_joint_indices] = x
             self.model.compute_forward_kinematics(qpos)
             target_link_poses = [self.model.get_link_pose(index) for index in self.robot_link_indices]

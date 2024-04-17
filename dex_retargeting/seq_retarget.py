@@ -20,11 +20,11 @@ class SeqRetargeting:
 
         # Joint limit
         self.has_joint_limits = has_joint_limits
-        joint_limits = np.ones_like(robot.get_qlimits())
+        joint_limits = np.ones_like(robot.joint_limits)
         joint_limits[:, 0] = -1e4  # a large value is equivalent to no limit
         joint_limits[:, 1] = 1e4
         if has_joint_limits:
-            joint_limits[:] = robot.get_qlimits()[:]
+            joint_limits[:] = robot.joint_limits[:]
             self.optimizer.set_joint_limit(joint_limits[self.optimizer.target_joint_indices])
         self.joint_limits = joint_limits
 

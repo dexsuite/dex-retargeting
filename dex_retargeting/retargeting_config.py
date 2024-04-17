@@ -1,4 +1,4 @@
-import sapien.core as sapien
+# import sapien.core as sapien
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Dict, Any
@@ -8,6 +8,7 @@ import numpy as np
 import yaml
 
 from dex_retargeting.optimizer_utils import LPFilter
+from dex_retargeting.robot_wrapper import RobotWrapper
 from dex_retargeting.seq_retarget import SeqRetargeting
 
 
@@ -44,9 +45,6 @@ class RetargetingConfig:
     # Optimization hyperparameter
     normal_delta: float = 4e-3
     huber_delta: float = 2e-2
-
-    # Constraint parameters
-    constraint_map: Optional[Dict[str, np.ndarray]] = None
 
     # Joint limit tag
     has_joint_limits: bool = True
@@ -125,13 +123,12 @@ class RetargetingConfig:
         config = RetargetingConfig(**cfg)
         return config
 
-    def build(self, scene: Optional[sapien.Scene] = None) -> SeqRetargeting:
+    def build(self) -> SeqRetargeting:
         from dex_retargeting.optimizer import (
             VectorOptimizer,
             PositionOptimizer,
             DexPilotAllegroOptimizer,
         )
-        from dex_retargeting.optimizer_utils import SAPIENKinematicsModelStandalone
         from dex_retargeting import yourdfpy as urdf
         import tempfile
 
@@ -141,19 +138,10 @@ class RetargetingConfig:
         temp_dir = tempfile.mkdtemp(prefix="dex_retargeting-")
         temp_path = f"{temp_dir}/{urdf_name}"
         robot_urdf.write_xml_file(temp_path)
-        sapien_model = SAPIENKinematicsModelStandalone(
-            temp_path,
-            add_dummy_translation=self.add_dummy_free_joint,
-            add_dummy_rotation=self.add_dummy_free_joint,
-            scene=scene,
-        )
-        robot = sapien_model.robot
-        robot.set_name(Path(self.urdf_path).stem)
-        joint_names = (
-            self.target_joint_names
-            if self.target_joint_names is not None
-            else [joint.get_name() for joint in robot.get_active_joints()]
-        )
+
+        # Load pinocchio model
+        robot = RobotWrapper(temp_path)
+        joint_names = self.target_joint_names if self.target_joint_names is not None else robot.active_joint_names
         if self.type == "position":
             optimizer = PositionOptimizer(
                 robot,
@@ -197,8 +185,6 @@ class RetargetingConfig:
             has_joint_limits=self.has_joint_limits,
             lp_filter=lp_filter,
         )
-        # TODO: hack here for SAPIEN
-        retargeting.scene = sapien_model.scene
         return retargeting
 
 

@@ -3,11 +3,11 @@ from time import time
 
 import numpy as np
 import pytest
-import sapien.core as sapien
 
 from dex_retargeting.constants import ROBOT_NAMES, get_default_config_path, RetargetingType, HandType, RobotName
 from dex_retargeting.optimizer import VectorOptimizer, PositionOptimizer
 from dex_retargeting.retargeting_config import RetargetingConfig
+from dex_retargeting.robot_wrapper import RobotWrapper
 
 
 class TestSapienOptimizer:
@@ -19,12 +19,12 @@ class TestSapienOptimizer:
     DEXPILOT_ROBOT_NAMES.remove(RobotName.ability)
 
     @staticmethod
-    def generate_vector_retargeting_data_gt(robot: sapien.Articulation, optimizer: VectorOptimizer):
-        joint_limit = robot.get_qlimits()
+    def generate_vector_retargeting_data_gt(robot: RobotWrapper, optimizer: VectorOptimizer):
+        joint_limit = robot.joint_limits
         random_qpos = np.random.uniform(joint_limit[:, 0], joint_limit[:, 1])
-        robot.set_qpos(random_qpos)
+        robot.compute_forward_kinematics(random_qpos)
 
-        random_pos = np.array([robot.get_links()[i].get_pose().p for i in optimizer.robot_link_indices])
+        random_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.robot_link_indices])
         origin_pos = random_pos[optimizer.origin_link_indices]
         task_pos = random_pos[optimizer.task_link_indices]
         random_target_vector = task_pos - origin_pos
@@ -33,13 +33,14 @@ class TestSapienOptimizer:
         return random_qpos, init_qpos, random_target_vector
 
     @staticmethod
-    def generate_position_retargeting_data_gt(robot: sapien.Articulation, optimizer: PositionOptimizer):
-        joint_limit = robot.get_qlimits()
+    def generate_position_retargeting_data_gt(robot: RobotWrapper, optimizer: PositionOptimizer):
+        joint_eps = 1e-5
+        joint_limit = robot.joint_limits
         random_qpos = np.random.uniform(joint_limit[:, 0], joint_limit[:, 1])
-        robot.set_qpos(random_qpos)
+        robot.compute_forward_kinematics(random_qpos)
 
-        random_target_pos = np.array([robot.get_links()[i].get_pose().p for i in optimizer.target_link_indices])
-        init_qpos = np.clip(random_qpos + np.random.randn(robot.dof) * 0.5, joint_limit[:, 0], joint_limit[:, 1])
+        random_target_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.target_link_indices])
+        init_qpos = np.clip(random_qpos + np.random.randn(robot.dof) * 0.5, joint_limit[:, 0] + joint_eps  , joint_limit[:, 1] - joint_eps)
 
         return random_qpos, init_qpos, random_target_pos
 
@@ -57,7 +58,7 @@ class TestSapienOptimizer:
 
         retargeting = config.build()
 
-        robot = retargeting.optimizer.robot
+        robot: RobotWrapper = retargeting.optimizer.robot
         optimizer = retargeting.optimizer
 
         num_optimization = 100
@@ -70,8 +71,8 @@ class TestSapienOptimizer:
 
             # Optimized position
             computed_qpos = optimizer.retarget(random_target_pos, fixed_qpos=[], last_qpos=init_qpos[:])
-            robot.set_qpos(np.array(computed_qpos))
-            computed_target_pos = np.array([robot.get_links()[i].get_pose().p for i in optimizer.target_link_indices])
+            robot.compute_forward_kinematics(computed_qpos)
+            computed_target_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.target_link_indices])
 
             # Position difference
             error = np.mean(np.linalg.norm(computed_target_pos - random_target_pos, axis=1))
