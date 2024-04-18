@@ -26,7 +26,7 @@ class RobotWrapper:
         return list(self.model.names)
 
     @property
-    def active_joint_names(self) -> List[str]:
+    def dof_joint_names(self) -> List[str]:
         nqs = self.model.nqs
         return [name for i, name in enumerate(self.model.names) if nqs[i] > 0]
 

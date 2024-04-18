@@ -1,7 +1,7 @@
 # import sapien.core as sapien
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from typing import Union
 
 import numpy as np
@@ -10,6 +10,8 @@ import yaml
 from dex_retargeting.optimizer_utils import LPFilter
 from dex_retargeting.robot_wrapper import RobotWrapper
 from dex_retargeting.seq_retarget import SeqRetargeting
+from dex_retargeting import yourdfpy as urdf
+from dex_retargeting.kinematics_adaptor import MimicJointKinematicAdaptor
 
 
 @dataclass
@@ -129,7 +131,6 @@ class RetargetingConfig:
             PositionOptimizer,
             DexPilotAllegroOptimizer,
         )
-        from dex_retargeting import yourdfpy as urdf
         import tempfile
 
         # Process the URDF with yourdfpy to better find file path
@@ -141,7 +142,7 @@ class RetargetingConfig:
 
         # Load pinocchio model
         robot = RobotWrapper(temp_path)
-        joint_names = self.target_joint_names if self.target_joint_names is not None else robot.active_joint_names
+        joint_names = self.target_joint_names if self.target_joint_names is not None else robot.dof_joint_names
         if self.type == "position":
             optimizer = PositionOptimizer(
                 robot,
@@ -180,6 +181,19 @@ class RetargetingConfig:
         else:
             lp_filter = None
 
+        # Parse mimic joints and set kinematics adaptor for optimizer
+        has_mimic_joints, source_names, mimic_names, multipliers, offsets = parse_mimic_joint(robot_urdf)
+        if has_mimic_joints:
+            adaptor = MimicJointKinematicAdaptor(
+                robot,
+                target_joint_names=joint_names,
+                source_joint_names=source_names,
+                mimic_joint_names=mimic_names,
+                multipliers=multipliers,
+                offsets=offsets,
+            )
+            optimizer.set_kinematic_adaptor(adaptor)
+
         retargeting = SeqRetargeting(
             optimizer,
             has_joint_limits=self.has_joint_limits,
@@ -191,6 +205,21 @@ class RetargetingConfig:
 def get_retargeting_config(config_path) -> RetargetingConfig:
     config = RetargetingConfig.load_from_file(config_path)
     return config
+
+
+def parse_mimic_joint(robot_urdf: urdf.URDF) -> Tuple[bool, List[str], List[str], List[float], List[float]]:
+    mimic_joint_names = []
+    source_joint_names = []
+    multipliers = []
+    offsets = []
+    for name, joint in robot_urdf.joint_map.items():
+        if joint.mimic is not None:
+            mimic_joint_names.append(name)
+            source_joint_names.append(joint.mimic.joint)
+            multipliers.append(joint.mimic.multiplier)
+            offsets.append(joint.mimic.offset)
+
+    return len(mimic_joint_names) > 0, source_joint_names, mimic_joint_names, multipliers, offsets
 
 
 if __name__ == "__main__":

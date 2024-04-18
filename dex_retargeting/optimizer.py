@@ -1,11 +1,12 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, Optional
 
 import nlopt
 import numpy as np
 import numpy.typing as npt
 import torch
 
+from dex_retargeting.kinematics_adaptor import KinematicAdaptor
 from dex_retargeting.robot_wrapper import RobotWrapper
 
 
@@ -21,21 +22,21 @@ class Optimizer:
     ):
         self.robot = robot
         self.robot_dof = robot.dof
-        # self.model = robot.create_pinocchio_model()
         self.wrist_link_name = wrist_link_name
 
-        joint_names = robot.active_joint_names
-        # joint_names = [joint.get_name() for joint in robot.get_active_joints()]
-        target_joint_index = []
+        joint_names = robot.dof_joint_names
+        idx_pin2target = []
         for target_joint_name in target_joint_names:
             if target_joint_name not in joint_names:
                 raise ValueError(f"Joint {target_joint_name} given does not appear to be in robot XML.")
-            target_joint_index.append(joint_names.index(target_joint_name))
+            idx_pin2target.append(joint_names.index(target_joint_name))
         self.target_joint_names = target_joint_names
-        self.target_joint_indices = np.array(target_joint_index)
-        self.fixed_joint_indices = np.array([i for i in range(robot.dof) if i not in target_joint_index], dtype=int)
-        self.opt = nlopt.opt(nlopt.LD_SLSQP, len(target_joint_index))
-        self.dof = len(target_joint_index)
+        self.idx_pin2target = np.array(idx_pin2target)
+
+        # TODO: handling fixed joint idx better
+        self.fixed_joint_indices = np.array([i for i in range(robot.dof) if i not in idx_pin2target], dtype=int)
+        self.opt = nlopt.opt(nlopt.LD_SLSQP, len(idx_pin2target))
+        self.dof = len(idx_pin2target)
 
         # Target
         self.target_link_human_indices = target_link_human_indices
@@ -44,14 +45,14 @@ class Optimizer:
         link_names = robot.link_names
         self.has_free_joint = len([name for name in link_names if "dummy" in name]) >= 6
 
+        # Kinematics adaptor
+        self.adaptor: Optional[KinematicAdaptor] = None
+
     def set_joint_limit(self, joint_limits: npt.NDArray):
         if joint_limits.shape != (self.dof, 2):
             raise ValueError(f"Expect joint limits have shape: {(self.dof, 2)}, but get {joint_limits.shape}")
         self.opt.set_lower_bounds(joint_limits[:, 0].tolist())
         self.opt.set_upper_bounds(joint_limits[:, 1].tolist())
-
-    def get_last_result(self):
-        return self.opt.last_optimize_result()
 
     def get_link_indices(self, target_link_names):
         return [self.robot.get_link_index(link_name) for link_name in target_link_names]
@@ -60,10 +61,13 @@ class Optimizer:
         self.opt.set_min_objective(objective_fn)
         try:
             qpos = self.opt.optimize(last_qpos)
+            return qpos
         except RuntimeError as e:
             print(e)
             return np.array(last_qpos)
-        return qpos
+
+    def set_kinematic_adaptor(self, adaptor: KinematicAdaptor):
+        self.adaptor = adaptor
 
     @abstractmethod
     def retarget(self, ref_value, fixed_qpos, last_qpos=None):
@@ -91,12 +95,6 @@ class PositionOptimizer(Optimizer):
         # Sanity check and cache link indices
         self.target_link_indices = self.get_link_indices(target_link_names)
 
-        # Use local jacobian if target link name <= 2, otherwise first cache all jacobian and then get all
-        # This is only for the speed but will not affect the performance
-        if len(target_link_names) <= 40:
-            self.use_sparse_jacobian = True
-        else:
-            self.use_sparse_jacobian = False
         self.opt.set_ftol_abs(1e-5)
 
     def _get_objective_function(self, target_pos: npt.NDArray, fixed_qpos: npt.NDArray, last_qpos: npt.NDArray):
@@ -106,7 +104,12 @@ class PositionOptimizer(Optimizer):
         torch_target_pos.requires_grad_(False)
 
         def objective(x: npt.NDArray, grad: npt.NDArray) -> float:
-            qpos[self.target_joint_indices] = x
+            qpos[self.idx_pin2target] = x
+
+            # Kinematics forwarding for qpos
+            if self.adaptor is not None:
+                qpos[:] = self.adaptor.forward_qpos(qpos)[:]
+
             self.robot.compute_forward_kinematics(qpos)
             target_link_poses = [self.robot.get_link_pose(index) for index in self.target_link_indices]
             body_pos = np.stack([pose[:3, 3] for pose in target_link_poses], axis=0)  # (n ,3)
@@ -117,34 +120,31 @@ class PositionOptimizer(Optimizer):
 
             # Loss term for kinematics retargeting based on 3D position error
             huber_distance = self.huber_loss(torch_body_pos, torch_target_pos)
-            # huber_distance = torch.norm(torch_body_pos - torch_target_pos, dim=1).mean()
             result = huber_distance.cpu().detach().item()
 
             if grad.size > 0:
-                if self.use_sparse_jacobian:
-                    jacobians = []
-                    for i, index in enumerate(self.target_link_indices):
-                        link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
-                            :3, self.target_joint_indices
-                        ]
-                        link_pose = target_link_poses[i]
-                        link_rot = link_pose[:3, :3]
-                        link_kinematics_jacobian = link_rot @ link_body_jacobian
-                        jacobians.append(link_kinematics_jacobian)
-                    jacobians = np.stack(jacobians, axis=0)
-                else:
-                    raise NotImplementedError
-                    # self.model.compute_full_jacobian(qpos)
-                    # jacobians = [
-                    #     self.model.get_link_jacobian(index, local=True)[:3, self.target_joint_indices]
-                    #     for index in self.target_link_indices
-                    # ]
+                jacobians = []
+                for i, index in enumerate(self.target_link_indices):
+                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[:3, ...]
+                    link_pose = target_link_poses[i]
+                    link_rot = link_pose[:3, :3]
+                    link_kinematics_jacobian = link_rot @ link_body_jacobian
+                    jacobians.append(link_kinematics_jacobian)
 
+                # Note: the joint order in this jacobian is consistent pinocchio
+                jacobians = np.stack(jacobians, axis=0)
                 huber_distance.backward()
                 grad_pos = torch_body_pos.grad.cpu().numpy()[:, None, :]
-                grad_qpos = np.matmul(grad_pos, np.array(jacobians))
-                grad_qpos = grad_qpos.mean(1).sum(0)
 
+                # Convert the jacobian from pinocchio order to target order
+                if self.adaptor is not None:
+                    jacobians = self.adaptor.backward_jacobian(jacobians)
+                else:
+                    jacobians = jacobians[..., self.idx_pin2target]
+
+                # Compute the gradient to the qpos
+                grad_qpos = np.matmul(grad_pos, jacobians)
+                grad_qpos = grad_qpos.mean(1).sum(0)
                 grad_qpos += 2 * self.norm_delta * (x - last_qpos)
 
                 grad[:] = grad_qpos[:]
@@ -200,12 +200,6 @@ class VectorOptimizer(Optimizer):
         # Sanity check and cache link indices
         self.robot_link_indices = self.get_link_indices(self.computed_link_names)
 
-        # Use local jacobian if target link name <= 2, otherwise first cache all jacobian and then get all
-        # This is only for the speed but will not affect the performance
-        if len(self.computed_link_names) <= 40:
-            self.use_sparse_jacobian = True
-        else:
-            self.use_sparse_jacobian = False
         self.opt.set_ftol_abs(1e-6)
 
     def _get_objective_function(self, target_vector: npt.NDArray, fixed_qpos: npt.NDArray, last_qpos: npt.NDArray):
@@ -215,7 +209,7 @@ class VectorOptimizer(Optimizer):
         torch_target_vec.requires_grad_(False)
 
         def objective(x: npt.NDArray, grad: npt.NDArray) -> float:
-            qpos[self.target_joint_indices] = x
+            qpos[self.idx_pin2target] = x
             self.robot.compute_forward_kinematics(qpos)
             target_link_poses = [self.robot.get_link_pose(index) for index in self.robot_link_indices]
             body_pos = np.array([pose[:3, 3] for pose in target_link_poses])
@@ -235,24 +229,16 @@ class VectorOptimizer(Optimizer):
             result = huber_distance.cpu().detach().item()
 
             if grad.size > 0:
-                if self.use_sparse_jacobian:
-                    jacobians = []
-                    for i, index in enumerate(self.robot_link_indices):
-                        link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
-                            :3, self.target_joint_indices
-                        ]
-                        link_pose = target_link_poses[i]
-                        link_rot = link_pose[:3, :3]
-                        link_kinematics_jacobian = link_rot @ link_body_jacobian
-                        jacobians.append(link_kinematics_jacobian)
-                    jacobians = np.stack(jacobians, axis=0)
-                else:
-                    raise NotImplementedError
-                    # self.model.compute_full_jacobian(qpos)
-                    # jacobians = [
-                    #     self.model.get_link_jacobian(index, local=True)[:3, self.target_joint_indices]
-                    #     for index in self.robot_link_indices
-                    # ]
+                jacobians = []
+                for i, index in enumerate(self.robot_link_indices):
+                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
+                        :3, self.idx_pin2target
+                    ]
+                    link_pose = target_link_poses[i]
+                    link_rot = link_pose[:3, :3]
+                    link_kinematics_jacobian = link_rot @ link_body_jacobian
+                    jacobians.append(link_kinematics_jacobian)
+                jacobians = np.stack(jacobians, axis=0)
 
                 huber_distance.backward()
                 grad_pos = torch_body_pos.grad.cpu().numpy()[:, None, :]
@@ -360,12 +346,6 @@ class DexPilotAllegroOptimizer(Optimizer):
         # Sanity check and cache link indices
         self.robot_link_indices = self.get_link_indices(self.computed_link_names)
 
-        # Use local jacobian if target link name <= 2, otherwise first cache all jacobian and then get all
-        # This is only for the speed but will not affect the performance
-        if len(self.computed_link_names) <= 40:
-            self.use_sparse_jacobian = True
-        else:
-            self.use_sparse_jacobian = False
         self.opt.set_ftol_abs(1e-6)
 
         # DexPilot cache
@@ -425,7 +405,7 @@ class DexPilotAllegroOptimizer(Optimizer):
         torch_target_vec.requires_grad_(False)
 
         def objective(x: npt.NDArray, grad: npt.NDArray) -> float:
-            qpos[self.target_joint_indices] = x
+            qpos[self.idx_pin2target] = x
             self.robot.compute_forward_kinematics(qpos)
             target_link_poses = [self.robot.get_link_pose(index) for index in self.robot_link_indices]
             body_pos = np.array([pose[:3, 3] for pose in target_link_poses])
@@ -449,25 +429,17 @@ class DexPilotAllegroOptimizer(Optimizer):
             result = huber_distance.cpu().detach().item()
 
             if grad.size > 0:
-                if self.use_sparse_jacobian:
-                    jacobians = []
-                    for i, index in enumerate(self.robot_link_indices):
-                        link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
-                            :3, self.target_joint_indices
-                        ]
-                        link_pose = target_link_poses[i]
-                        link_rot = link_pose[:3, :3]
-                        link_kinematics_jacobian = link_rot @ link_body_jacobian
-                        jacobians.append(link_kinematics_jacobian)
-                    jacobians = np.stack(jacobians, axis=0)
-                else:
-                    raise NotImplementedError
-                    # self.model.compute_full_jacobian(qpos)
-                    # jacobians = [
-                    #     self.model.get_link_jacobian(index, local=True)[:3, self.target_joint_indices]
-                    #     for index in self.robot_link_indices
-                    # ]
+                jacobians = []
+                for i, index in enumerate(self.robot_link_indices):
+                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
+                        :3, self.idx_pin2target
+                    ]
+                    link_pose = target_link_poses[i]
+                    link_rot = link_pose[:3, :3]
+                    link_kinematics_jacobian = link_rot @ link_body_jacobian
+                    jacobians.append(link_kinematics_jacobian)
 
+                jacobians = np.stack(jacobians, axis=0)
                 huber_distance.backward()
                 grad_pos = torch_body_pos.grad.cpu().numpy()[:, None, :]
                 grad_qpos = np.matmul(grad_pos, np.array(jacobians))

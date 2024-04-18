@@ -25,11 +25,11 @@ class SeqRetargeting:
         joint_limits[:, 1] = 1e4
         if has_joint_limits:
             joint_limits[:] = robot.joint_limits[:]
-            self.optimizer.set_joint_limit(joint_limits[self.optimizer.target_joint_indices])
+            self.optimizer.set_joint_limit(joint_limits[self.optimizer.idx_pin2target])
         self.joint_limits = joint_limits
 
         # Temporal information
-        self.last_qpos = joint_limits.mean(1)[self.optimizer.target_joint_indices]
+        self.last_qpos = joint_limits.mean(1)[self.optimizer.idx_pin2target]
         self.accumulated_time = 0
         self.num_retargeting = 0
 
@@ -116,7 +116,7 @@ class SeqRetargeting:
         self.last_qpos = qpos
         robot_qpos = np.zeros(self.optimizer.robot.dof)
         robot_qpos[self.optimizer.fixed_joint_indices] = fixed_qpos
-        robot_qpos[self.optimizer.target_joint_indices] = qpos
+        robot_qpos[self.optimizer.idx_pin2target] = qpos
         if self.filter is not None:
             robot_qpos = self.filter.next(robot_qpos)
         return robot_qpos
@@ -127,5 +127,5 @@ class SeqRetargeting:
         print(f"Last distance: {min_value}")
 
     def reset(self):
-        self.last_qpos = self.joint_limits.mean(1)[self.optimizer.target_joint_indices]
+        self.last_qpos = self.joint_limits.mean(1)[self.optimizer.idx_pin2target]
         self.num_retargeting = 0
