@@ -115,7 +115,7 @@ class SeqRetargeting:
         self.num_retargeting += 1
         self.last_qpos = qpos
         robot_qpos = np.zeros(self.optimizer.robot.dof)
-        robot_qpos[self.optimizer.fixed_joint_indices] = fixed_qpos
+        robot_qpos[self.optimizer.idx_pin2fixed] = fixed_qpos
         robot_qpos[self.optimizer.idx_pin2target] = qpos
         if self.filter is not None:
             robot_qpos = self.filter.next(robot_qpos)

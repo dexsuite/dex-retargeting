@@ -6,6 +6,9 @@ import pinocchio as pin
 
 
 class RobotWrapper:
+    """
+    This class does not take mimic joint into consideration
+    """
     def __init__(self, urdf_path: str, use_collision=False, use_visual=False):
         # Create robot model and data
         self.model: pin.Model = pin.buildModelFromUrdf(urdf_path)
@@ -51,7 +54,7 @@ class RobotWrapper:
     # Query function
     # -------------------------------------------------------------------------- #
     def get_joint_index(self, name: str):
-        return self.model.getJointId(name)
+        return self.dof_joint_names.index(name)
 
     def get_link_index(self, name: str):
         return self.model.getFrameId(name)

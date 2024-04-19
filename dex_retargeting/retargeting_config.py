@@ -51,6 +51,9 @@ class RetargetingConfig:
     # Joint limit tag
     has_joint_limits: bool = True
 
+    # Mimic joint tag
+    ignore_mimic_joint: bool = False
+
     # Low pass filter
     low_pass_alpha: float = 0.1
 
@@ -183,7 +186,7 @@ class RetargetingConfig:
 
         # Parse mimic joints and set kinematics adaptor for optimizer
         has_mimic_joints, source_names, mimic_names, multipliers, offsets = parse_mimic_joint(robot_urdf)
-        if has_mimic_joints:
+        if has_mimic_joints and not self.ignore_mimic_joint:
             adaptor = MimicJointKinematicAdaptor(
                 robot,
                 target_joint_names=joint_names,
@@ -193,6 +196,12 @@ class RetargetingConfig:
                 offsets=offsets,
             )
             optimizer.set_kinematic_adaptor(adaptor)
+            print(
+                "\033[34m",
+                "Mimic joint adaptor enabled. The mimic joint tags in the URDF will be considered during retargeting.\n"
+                "To disable mimic joint adaptor, consider setting ignore_mimic_joint=True in the configuration.",
+                "'\033[39m'"
+            )
 
         retargeting = SeqRetargeting(
             optimizer,

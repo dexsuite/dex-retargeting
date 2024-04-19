@@ -5,18 +5,33 @@ import numpy as np
 import pytest
 
 from dex_retargeting.constants import ROBOT_NAMES, get_default_config_path, RetargetingType, HandType, RobotName
-from dex_retargeting.optimizer import VectorOptimizer, PositionOptimizer
+from dex_retargeting.optimizer import VectorOptimizer, PositionOptimizer, Optimizer
 from dex_retargeting.retargeting_config import RetargetingConfig
 from dex_retargeting.robot_wrapper import RobotWrapper
 
 
-class TestSapienOptimizer:
+class TestOptimizer:
     np.set_printoptions(precision=4)
     config_dir = Path(__file__).parent.parent / "dex_retargeting" / "configs"
     robot_dir = Path(__file__).parent.parent / "assets" / "robots" / "hands"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir.absolute()))
     DEXPILOT_ROBOT_NAMES = ROBOT_NAMES.copy()
     DEXPILOT_ROBOT_NAMES.remove(RobotName.ability)
+
+    @staticmethod
+    def sample_qpos(optimizer: Optimizer):
+        joint_eps = 1e-5
+        robot = optimizer.robot
+        adaptor = optimizer.adaptor
+        joint_limit = robot.joint_limits
+        random_qpos = np.random.uniform(joint_limit[:, 0], joint_limit[:, 1])
+        if adaptor is not None:
+            random_qpos = adaptor.forward_qpos(random_qpos)
+
+        init_qpos = np.clip(
+            random_qpos + np.random.randn(robot.dof) * 0.5, joint_limit[:, 0] + joint_eps, joint_limit[:, 1] - joint_eps
+        )[optimizer.idx_pin2target]
+        return random_qpos, init_qpos
 
     @staticmethod
     def generate_vector_retargeting_data_gt(robot: RobotWrapper, optimizer: VectorOptimizer):
@@ -34,17 +49,21 @@ class TestSapienOptimizer:
 
     @staticmethod
     def generate_position_retargeting_data_gt(robot: RobotWrapper, optimizer: PositionOptimizer):
-        joint_eps = 1e-5
-        joint_limit = robot.joint_limits
-        random_qpos = np.random.uniform(joint_limit[:, 0], joint_limit[:, 1])
-        robot.compute_forward_kinematics(random_qpos)
-
+        random_pin_qpos, init_qpos = TestOptimizer.sample_qpos(optimizer)
+        robot.compute_forward_kinematics(random_pin_qpos)
         random_target_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.target_link_indices])
-        init_qpos = np.clip(
-            random_qpos + np.random.randn(robot.dof) * 0.5, joint_limit[:, 0] + joint_eps, joint_limit[:, 1] - joint_eps
-        )
 
-        return random_qpos, init_qpos, random_target_pos
+        return random_pin_qpos, init_qpos, random_target_pos
+
+    @staticmethod
+    def compute_pin_qpos(optimizer: Optimizer, qpos: np.ndarray, fixed_qpos: np.ndarray):
+        adaptor = optimizer.adaptor
+        full_qpos = np.zeros(optimizer.robot.model.nq)
+        full_qpos[optimizer.idx_pin2target] = qpos
+        full_qpos[optimizer.idx_pin2fixed] = fixed_qpos
+        if adaptor is not None:
+            full_qpos = adaptor.forward_qpos(full_qpos)
+        return full_qpos
 
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
     @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
@@ -70,10 +89,13 @@ class TestSapienOptimizer:
         for i in range(num_optimization):
             # Sampled random position
             random_qpos, init_qpos, random_target_pos = self.generate_position_retargeting_data_gt(robot, optimizer)
+            fixed_qpos = random_qpos[optimizer.idx_pin2fixed]
 
             # Optimized position
-            computed_qpos = optimizer.retarget(random_target_pos, fixed_qpos=[], last_qpos=init_qpos[:])
-            robot.compute_forward_kinematics(computed_qpos)
+            computed_qpos = optimizer.retarget(random_target_pos, fixed_qpos=fixed_qpos, last_qpos=init_qpos[:])
+
+            # Check results
+            robot.compute_forward_kinematics(self.compute_pin_qpos(optimizer, computed_qpos, fixed_qpos))
             computed_target_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.target_link_indices])
 
             # Position difference

@@ -67,7 +67,7 @@ class TestRetargetingConfig:
         cfg_dict = yaml.safe_load(cfg_str)
         config = RetargetingConfig.from_dict(cfg_dict)
         retargeting = config.build()
-        assert type(retargeting) == SeqRetargeting
+        assert isinstance(retargeting, SeqRetargeting)
 
     def test_multi_dict_config_parsing(self):
         cfg_str = """

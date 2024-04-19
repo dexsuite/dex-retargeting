@@ -1,7 +1,6 @@
 import importlib.metadata
 import importlib.util
 import re
-import warnings
 from pathlib import Path
 
 from setuptools import setup, find_packages
@@ -43,10 +42,12 @@ if torch_info is not None:
             "Please uninstall the current torch or install torch >= 2.0.0, then reinstall this package."
         )
 else:
-    warnings.warn(
+    print(
+        "\033[33m",
         "No pre-installed torch detected. A GPU-only version will be installed.\n"
         "Note that dex-retargeting is compatible with both CPU and GPU versions of torch, as it only requires the CPU features.\n"
-        "To save time and space, you can also install a torch cpu version and reinstall this package.\n"
+        "To save time and space, you can also install a torch cpu version and reinstall this package.\n",
+        "\033[39m",
     )
 
     core_requirements.append("torch")

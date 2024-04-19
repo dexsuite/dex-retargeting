@@ -12,12 +12,12 @@ class KinematicAdaptor:
         self.target_joint_names = target_joint_names
 
         # Index mapping
-        self.pin2target = np.array([robot.get_joint_index(n) for n in target_joint_names])
+        self.idx_pin2target = np.array([robot.get_joint_index(n) for n in target_joint_names])
 
     @abstractmethod
     def forward_qpos(self, qpos: np.ndarray) -> np.ndarray:
         """
-        Adapt the joint position for different kinematics applications.
+        Adapt the joint position for different kinematics constraints.
         Note that the joint order of this qpos is consistent with pinocchio
         Args:
             qpos: the pinocchio qpos
@@ -68,14 +68,14 @@ class MimicJointKinematicAdaptor(KinematicAdaptor):
             )
 
         # Indices in the pinocchio
-        self.source_joint_idx_in_pin = np.array([robot.get_joint_index(name) for name in source_joint_names])
-        self.mimic_joint_idx_in_pin = np.array([robot.get_joint_index(name) for name in mimic_joint_names])
+        self.idx_pin2source = np.array([robot.get_joint_index(name) for name in source_joint_names])
+        self.idx_pin2mimic = np.array([robot.get_joint_index(name) for name in mimic_joint_names])
 
         # Indices in the output results
-        self.source_joint_idx_in_target = np.array([self.target_joint_names.index(n) for n in source_joint_names])
+        self.idx_target2source = np.array([self.target_joint_names.index(n) for n in source_joint_names])
 
         # Dimension check
-        len_source, len_mimic = self.source_joint_idx_in_target.shape[0], self.mimic_joint_idx_in_pin.shape[0]
+        len_source, len_mimic = self.idx_target2source.shape[0], self.idx_pin2mimic.shape[0]
         len_mul, len_offset = self.multipliers.shape[0], self.offsets.shape[0]
         if not (len_mimic == len_source == len_mul == len_offset):
             raise ValueError(
@@ -89,14 +89,14 @@ class MimicJointKinematicAdaptor(KinematicAdaptor):
             raise ValueError(f"Redundant mimic joint names: {mimic_joint_names}")
 
     def forward_qpos(self, pin_qpos: np.ndarray) -> np.ndarray:
-        mimic_qpos = pin_qpos[self.source_joint_idx_in_pin] * self.multipliers + self.offsets
-        pin_qpos[self.mimic_joint_idx_in_pin] = mimic_qpos
+        mimic_qpos = pin_qpos[self.idx_pin2source] * self.multipliers + self.offsets
+        pin_qpos[self.idx_pin2mimic] = mimic_qpos
         return pin_qpos
 
     def backward_jacobian(self, jacobian: np.ndarray) -> np.ndarray:
-        target_jacobian = jacobian[..., self.pin2target]
-        mimic_joint_jacobian = jacobian[..., self.mimic_joint_idx_in_pin] * self.multipliers
-        source_joint_jacobian = np.bincount(
-            mimic_joint_jacobian, self.source_joint_idx_in_target, minlength=len(self.target_joint_names)
-        )
-        return target_jacobian + source_joint_jacobian
+        target_jacobian = jacobian[..., self.idx_pin2target]
+        mimic_joint_jacobian = jacobian[..., self.idx_pin2mimic] * self.multipliers
+
+        for i, index in enumerate(self.idx_target2source):
+            target_jacobian[..., index] += mimic_joint_jacobian[..., i]
+        return target_jacobian

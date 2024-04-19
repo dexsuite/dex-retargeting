@@ -11,3 +11,6 @@ retargeting:
   # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
   # 1 means no filter while 0 means not moving
   low_pass_alpha: 1
+
+  # To ignore the mimic joint tags in the URDF, set it to True
+  ignore_mimic_joint: False
