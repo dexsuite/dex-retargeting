@@ -34,28 +34,6 @@ class TestOptimizer:
         return random_qpos, init_qpos
 
     @staticmethod
-    def generate_vector_retargeting_data_gt(robot: RobotWrapper, optimizer: VectorOptimizer):
-        joint_limit = robot.joint_limits
-        random_qpos = np.random.uniform(joint_limit[:, 0], joint_limit[:, 1])
-        robot.compute_forward_kinematics(random_qpos)
-
-        random_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.robot_link_indices])
-        origin_pos = random_pos[optimizer.origin_link_indices]
-        task_pos = random_pos[optimizer.task_link_indices]
-        random_target_vector = task_pos - origin_pos
-        init_qpos = np.clip(random_qpos + np.random.randn(robot.dof) * 0.5, joint_limit[:, 0], joint_limit[:, 1])
-
-        return random_qpos, init_qpos, random_target_vector
-
-    @staticmethod
-    def generate_position_retargeting_data_gt(robot: RobotWrapper, optimizer: PositionOptimizer):
-        random_pin_qpos, init_qpos = TestOptimizer.sample_qpos(optimizer)
-        robot.compute_forward_kinematics(random_pin_qpos)
-        random_target_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.target_link_indices])
-
-        return random_pin_qpos, init_qpos, random_target_pos
-
-    @staticmethod
     def compute_pin_qpos(optimizer: Optimizer, qpos: np.ndarray, fixed_qpos: np.ndarray):
         adaptor = optimizer.adaptor
         full_qpos = np.zeros(optimizer.robot.model.nq)
@@ -64,6 +42,25 @@ class TestOptimizer:
         if adaptor is not None:
             full_qpos = adaptor.forward_qpos(full_qpos)
         return full_qpos
+
+    @staticmethod
+    def generate_vector_retargeting_data_gt(robot: RobotWrapper, optimizer: VectorOptimizer):
+        random_pin_qpos, init_qpos = TestOptimizer.sample_qpos(optimizer)
+        robot.compute_forward_kinematics(random_pin_qpos)
+        random_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.computed_link_indices])
+        origin_pos = random_pos[optimizer.origin_link_indices]
+        task_pos = random_pos[optimizer.task_link_indices]
+        random_target_vector = task_pos - origin_pos
+
+        return random_pin_qpos, init_qpos, random_target_vector
+
+    @staticmethod
+    def generate_position_retargeting_data_gt(robot: RobotWrapper, optimizer: PositionOptimizer):
+        random_pin_qpos, init_qpos = TestOptimizer.sample_qpos(optimizer)
+        robot.compute_forward_kinematics(random_pin_qpos)
+        random_target_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.target_link_indices])
+
+        return random_pin_qpos, init_qpos, random_target_pos
 
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
     @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
@@ -134,11 +131,14 @@ class TestOptimizer:
         for i in range(num_optimization):
             # Sampled random vector
             random_qpos, init_qpos, random_target_vector = self.generate_vector_retargeting_data_gt(robot, optimizer)
+            fixed_qpos = random_qpos[optimizer.idx_pin2fixed]
 
             # Optimized vector
-            computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=[], last_qpos=init_qpos[:])
-            robot.compute_forward_kinematics(computed_qpos)
-            computed_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.robot_link_indices])
+            computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=fixed_qpos, last_qpos=init_qpos[:])
+
+            # Check results
+            robot.compute_forward_kinematics(self.compute_pin_qpos(optimizer, computed_qpos, fixed_qpos))
+            computed_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.computed_link_indices])
             computed_origin_pos = computed_pos[optimizer.origin_link_indices]
             computed_task_pos = computed_pos[optimizer.task_link_indices]
             computed_target_vector = computed_task_pos - computed_origin_pos
@@ -179,11 +179,13 @@ class TestOptimizer:
         for i in range(num_optimization):
             # Sampled random vector
             random_qpos, init_qpos, random_target_vector = self.generate_vector_retargeting_data_gt(robot, optimizer)
+            fixed_qpos = random_qpos[optimizer.idx_pin2fixed]
 
             # Optimized vector
-            computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=[], last_qpos=init_qpos[:])
-            robot.compute_forward_kinematics(computed_qpos)
-            computed_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.robot_link_indices])
+            computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=fixed_qpos, last_qpos=init_qpos[:])
+
+            robot.compute_forward_kinematics(self.compute_pin_qpos(optimizer, computed_qpos, fixed_qpos))
+            computed_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.computed_link_indices])
             computed_origin_pos = computed_pos[optimizer.origin_link_indices]
             computed_task_pos = computed_pos[optimizer.task_link_indices]
             computed_target_vector = computed_task_pos - computed_origin_pos

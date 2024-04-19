@@ -32,7 +32,6 @@ class Optimizer:
         self.target_joint_names = target_joint_names
         self.idx_pin2target = np.array(idx_pin2target)
 
-        # TODO: handling fixed joint idx better
         self.idx_pin2fixed = np.array([i for i in range(robot.dof) if i not in idx_pin2target], dtype=int)
         self.opt = nlopt.opt(nlopt.LD_SLSQP, len(idx_pin2target))
         self.opt_dof = len(idx_pin2target)  # This dof includes the mimic joints
@@ -200,8 +199,8 @@ class VectorOptimizer(Optimizer):
         )
         self.task_link_indices = torch.tensor([self.computed_link_names.index(name) for name in target_task_link_names])
 
-        # Sanity check and cache link indices
-        self.robot_link_indices = self.get_link_indices(self.computed_link_names)
+        # Cache link indices that will involve in kinematics computation
+        self.computed_link_indices = self.get_link_indices(self.computed_link_names)
 
         self.opt.set_ftol_abs(1e-6)
 
@@ -213,8 +212,13 @@ class VectorOptimizer(Optimizer):
 
         def objective(x: np.ndarray, grad: np.ndarray) -> float:
             qpos[self.idx_pin2target] = x
+
+            # Kinematics forwarding for qpos
+            if self.adaptor is not None:
+                qpos[:] = self.adaptor.forward_qpos(qpos)[:]
+
             self.robot.compute_forward_kinematics(qpos)
-            target_link_poses = [self.robot.get_link_pose(index) for index in self.robot_link_indices]
+            target_link_poses = [self.robot.get_link_pose(index) for index in self.computed_link_indices]
             body_pos = np.array([pose[:3, 3] for pose in target_link_poses])
 
             # Torch computation for accurate loss and grad
@@ -233,21 +237,26 @@ class VectorOptimizer(Optimizer):
 
             if grad.size > 0:
                 jacobians = []
-                for i, index in enumerate(self.robot_link_indices):
-                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
-                        :3, self.idx_pin2target
-                    ]
+                for i, index in enumerate(self.computed_link_indices):
+                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[:3, ...]
                     link_pose = target_link_poses[i]
                     link_rot = link_pose[:3, :3]
                     link_kinematics_jacobian = link_rot @ link_body_jacobian
                     jacobians.append(link_kinematics_jacobian)
-                jacobians = np.stack(jacobians, axis=0)
 
+                # Note: the joint order in this jacobian is consistent pinocchio
+                jacobians = np.stack(jacobians, axis=0)
                 huber_distance.backward()
                 grad_pos = torch_body_pos.grad.cpu().numpy()[:, None, :]
+
+                # Convert the jacobian from pinocchio order to target order
+                if self.adaptor is not None:
+                    jacobians = self.adaptor.backward_jacobian(jacobians)
+                else:
+                    jacobians = jacobians[..., self.idx_pin2target]
+
                 grad_qpos = np.matmul(grad_pos, np.array(jacobians))
                 grad_qpos = grad_qpos.mean(1).sum(0)
-
                 grad_qpos += 2 * self.norm_delta * (x - last_qpos)
 
                 grad[:] = grad_qpos[:]
@@ -336,7 +345,7 @@ class DexPilotAllegroOptimizer(Optimizer):
         self.task_link_indices = torch.tensor([self.computed_link_names.index(name) for name in target_task_link_names])
 
         # Sanity check and cache link indices
-        self.robot_link_indices = self.get_link_indices(self.computed_link_names)
+        self.computed_link_indices = self.get_link_indices(self.computed_link_names)
 
         self.opt.set_ftol_abs(1e-6)
 
@@ -353,7 +362,6 @@ class DexPilotAllegroOptimizer(Optimizer):
             self.projected_dist = np.array([eta1] * 4 + [eta2] * 6)
 
     def get_objective_function(self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
-        target_vector = target_vector.astype(np.float32)
         qpos = np.zeros(self.num_joints)
         qpos[self.idx_pin2fixed] = fixed_qpos
 
@@ -396,8 +404,13 @@ class DexPilotAllegroOptimizer(Optimizer):
 
         def objective(x: np.ndarray, grad: np.ndarray) -> float:
             qpos[self.idx_pin2target] = x
+
+            # Kinematics forwarding for qpos
+            if self.adaptor is not None:
+                qpos[:] = self.adaptor.forward_qpos(qpos)[:]
+
             self.robot.compute_forward_kinematics(qpos)
-            target_link_poses = [self.robot.get_link_pose(index) for index in self.robot_link_indices]
+            target_link_poses = [self.robot.get_link_pose(index) for index in self.computed_link_indices]
             body_pos = np.array([pose[:3, 3] for pose in target_link_poses])
 
             # Torch computation for accurate loss and grad
@@ -420,18 +433,24 @@ class DexPilotAllegroOptimizer(Optimizer):
 
             if grad.size > 0:
                 jacobians = []
-                for i, index in enumerate(self.robot_link_indices):
-                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[
-                        :3, self.idx_pin2target
-                    ]
+                for i, index in enumerate(self.computed_link_indices):
+                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[:3, ...]
                     link_pose = target_link_poses[i]
                     link_rot = link_pose[:3, :3]
                     link_kinematics_jacobian = link_rot @ link_body_jacobian
                     jacobians.append(link_kinematics_jacobian)
 
+                # Note: the joint order in this jacobian is consistent pinocchio
                 jacobians = np.stack(jacobians, axis=0)
                 huber_distance.backward()
                 grad_pos = torch_body_pos.grad.cpu().numpy()[:, None, :]
+
+                # Convert the jacobian from pinocchio order to target order
+                if self.adaptor is not None:
+                    jacobians = self.adaptor.backward_jacobian(jacobians)
+                else:
+                    jacobians = jacobians[..., self.idx_pin2target]
+
                 grad_qpos = np.matmul(grad_pos, np.array(jacobians))
                 grad_qpos = grad_qpos.mean(1).sum(0)
 

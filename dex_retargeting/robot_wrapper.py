@@ -9,6 +9,7 @@ class RobotWrapper:
     """
     This class does not take mimic joint into consideration
     """
+
     def __init__(self, urdf_path: str, use_collision=False, use_visual=False):
         # Create robot model and data
         self.model: pin.Model = pin.buildModelFromUrdf(urdf_path)
