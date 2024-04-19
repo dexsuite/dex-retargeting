@@ -1,6 +1,13 @@
 [tool.black]
 line_length = 120
 
+[tool.isort]
+profile = "black"
+skip_gitignore = true
+
+[tool.mypy]
+plugins = ["numpy.typing.mypy_plugin"]
+
 [tool.pytest.ini_options]
 addopts = "--disable-warnings"
 testpaths = [

@@ -1,3 +1,5 @@
+import importlib.metadata
+import importlib.util
 import re
 from pathlib import Path
 
@@ -14,17 +16,42 @@ with open(_here / name / "__init__.py") as f:
     else:
         raise RuntimeError("Unable to find __version__ string.")
 
+
 core_requirements = [
-    "numpy<1.24",
-    "torch",
-    "sapien>=2.0.0",
+    "numpy",
+    "pytransform3d",
+    "pin>=2.7.0",
     "nlopt",
     "trimesh",
     "anytree",
-    "pycollada",
     "pyyaml",
     "lxml",
 ]
+
+
+# Check whether you have torch installed
+torch_info = importlib.util.find_spec("torch")
+if torch_info is not None:
+    version = importlib.metadata.version("torch")
+    major_version = version.split(".")[0]
+    if int(major_version) >= 2:
+        print(f"A valid torch with version {version}: has been already installed, skip it.")
+    else:
+        raise RuntimeError(
+            f"dex-retargeting requires a torch version of 2.0.0 or higher. Currently, version {version} is installed.\n"
+            "Please uninstall the current torch or install torch >= 2.0.0, then reinstall this package."
+        )
+else:
+    print(
+        "\033[33m",
+        "No pre-installed torch detected. A GPU-only version will be installed.\n"
+        "Note that dex-retargeting is compatible with both CPU and GPU versions of torch, as it only requires the CPU features.\n"
+        "To save time and space, you can also install a torch cpu version and reinstall this package.\n",
+        "\033[39m",
+    )
+
+    core_requirements.append("torch")
+
 
 dev_requirements = [
     "pytest",
@@ -33,14 +60,10 @@ dev_requirements = [
     "pytest-xdist",
     "pyright",
     "ruff",
+    "mypy",
 ]
 
-example_requirements = [
-    "tyro",
-    "tqdm",
-    "opencv-python",
-    "mediapipe",
-]
+example_requirements = ["tyro", "tqdm", "opencv-python", "mediapipe", "sapien<3.0"]
 
 classifiers = [
     "Development Status :: 3 - Alpha",

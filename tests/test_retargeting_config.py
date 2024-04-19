@@ -13,15 +13,21 @@ VECTOR_CONFIG_DICT = {
     "svh_right": "teleop/schunk_svh_hand_right.yml",
     "leap_right": "teleop/leap_hand_right.yml",
     "ability_right": "teleop/ability_hand_right.yml",
+    "ability_left": "teleop/ability_hand_left.yml",
 }
 POSITION_CONFIG_DICT = {
     "allegro_right": "offline/allegro_hand_right.yml",
     "shadow_right": "offline/shadow_hand_right.yml",
     "svh_right": "offline/schunk_svh_hand_right.yml",
     "leap_right": "offline/leap_hand_right.yml",
+    "ability_right": "offline/ability_hand_right.yml",
 }
 DEXPILOT_CONFIG_DICT = {
     "allegro_right": "teleop/allegro_hand_right_dexpilot.yml",
+    "allegro_left": "teleop/allegro_hand_left_dexpilot.yml",
+    "shadow_right": "teleop/shadow_hand_right_dexpilot.yml",
+    "svh_right": "teleop/schunk_svh_hand_right_dexpilot.yml",
+    "leap_right": "teleop/leap_hand_right_dexpilot.yml",
 }
 
 ROBOT_NAMES = list(VECTOR_CONFIG_DICT.keys())
@@ -45,27 +51,23 @@ class TestRetargetingConfig:
 
     def test_dict_config_parsing(self):
         cfg_str = """
-        type: vector
-        urdf_path: allegro_hand/allegro_hand_right.urdf
-        wrist_link_name: "wrist"
+        type: position
+        urdf_path: ability_hand/ability_hand_right.urdf
+        wrist_link_name: "base_link"
 
-        # Target refers to the retargeting target, which is the robot hand
-        target_joint_names: null
-        target_origin_link_names: [ "wrist", "wrist", "wrist", "wrist" ]
-        target_task_link_names: [ "link_15.0_tip", "link_3.0_tip", "link_7.0_tip", "link_11.0_tip" ]
-        scaling_factor: 1.6
+        target_joint_names: ['index_q1', 'middle_q1', 'pinky_q1', 'ring_q1', 'thumb_q1', 'thumb_q2']
+        target_link_names: [ "thumb_tip",  "index_tip", "middle_tip", "ring_tip", "pinky_tip" ]
 
-        # Source refers to the retargeting input, which usually corresponds to the human hand
-        # The joint indices of human hand joint which corresponds to each link in the target_link_names
-        target_link_human_indices: [ [ 0, 0, 0, 0 ], [ 4, 8, 12, 16 ] ]
+        target_link_human_indices: [ 4, 8, 12, 16, 20 ]
 
         # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
-        low_pass_alpha: 0.2
+        # 1 means no filter while 0 means not moving
+        low_pass_alpha: 1
         """
         cfg_dict = yaml.safe_load(cfg_str)
         config = RetargetingConfig.from_dict(cfg_dict)
         retargeting = config.build()
-        assert type(retargeting) == SeqRetargeting
+        assert isinstance(retargeting, SeqRetargeting)
 
     def test_multi_dict_config_parsing(self):
         cfg_str = """

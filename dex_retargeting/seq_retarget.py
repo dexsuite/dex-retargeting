@@ -2,7 +2,7 @@ from time import time
 from typing import Optional
 
 import numpy as np
-import transforms3d
+from pytransform3d import rotations
 
 from dex_retargeting.optimizer import Optimizer
 from dex_retargeting.optimizer_utils import LPFilter
@@ -20,16 +20,16 @@ class SeqRetargeting:
 
         # Joint limit
         self.has_joint_limits = has_joint_limits
-        joint_limits = np.ones_like(robot.get_qlimits())
+        joint_limits = np.ones_like(robot.joint_limits)
         joint_limits[:, 0] = -1e4  # a large value is equivalent to no limit
         joint_limits[:, 1] = 1e4
         if has_joint_limits:
-            joint_limits[:] = robot.get_qlimits()[:]
-            self.optimizer.set_joint_limit(joint_limits[self.optimizer.target_joint_indices])
+            joint_limits[:] = robot.joint_limits[:]
+            self.optimizer.set_joint_limit(joint_limits[self.optimizer.idx_pin2target])
         self.joint_limits = joint_limits
 
         # Temporal information
-        self.last_qpos = joint_limits.mean(1)[self.optimizer.target_joint_indices]
+        self.last_qpos = joint_limits.mean(1)[self.optimizer.idx_pin2target]
         self.accumulated_time = 0
         self.num_retargeting = 0
 
@@ -43,6 +43,18 @@ class SeqRetargeting:
         self.scene = None
 
     def warm_start(self, wrist_pos: np.ndarray, wrist_orientation: np.ndarray, global_rot: np.array):
+        """
+        Initialize the wrist joint pose using analytical computation instead of retargeting optimization.
+        This function is specifically for position retargeting with the flying robot hand, i.e. has 6D free joint
+        You are not expected to use this function for vector retargeting, e.g. when you are working on teleoperation
+        Args:
+            wrist_pos: position of the hand wrist, typically from human hand pose
+            wrist_orientation: orientation of the hand orientation, typically from human hand pose in MANO convention
+            global_rot:
+
+        Returns:
+
+        """
         # This function can only be used when the first joints of robot are free joints
         if len(wrist_pos) != 3:
             raise ValueError(f"Wrist pos:{wrist_pos} is not a 3-dim vector.")
@@ -52,10 +64,7 @@ class SeqRetargeting:
         if np.linalg.norm(wrist_orientation) < 1e-3:
             mat = np.eye(3)
         else:
-            angle = np.linalg.norm(wrist_orientation)
-            axis = wrist_orientation / angle
-            mat = transforms3d.axangles.axangle2mat(axis, angle)
-            print(transforms3d.quaternions.axangle2quat(axis, angle))
+            mat = rotations.matrix_from_compact_axis_angle(wrist_orientation)
 
         robot = self.optimizer.robot
         operator2mano = np.array([[0, 0, -1], [-1, 0, 0], [0, 1, 0]])
@@ -65,7 +74,7 @@ class SeqRetargeting:
         target_wrist_pose[:3, 3] = wrist_pos
 
         wrist_link_name = self.optimizer.wrist_link_name
-        wrist_link = [link for link in self.optimizer.robot.get_links() if link.get_name() == wrist_link_name][0]
+        wrist_link_id = self.optimizer.robot.get_link_index(wrist_link_name)
         name_list = [
             "dummy_x_translation_joint",
             "dummy_y_translation_joint",
@@ -74,28 +83,20 @@ class SeqRetargeting:
             "dummy_y_rotation_joint",
             "dummy_z_rotation_joint",
         ]
-        old_qpos = robot.get_qpos()
+        old_qpos = robot.q0
         new_qpos = old_qpos.copy()
         for num, joint_name in enumerate(self.optimizer.target_joint_names):
             if joint_name in name_list:
                 new_qpos[num] = 0
-        robot.set_qpos(new_qpos)
-        root2wrist = (robot.get_pose().inv() * wrist_link.get_pose()).inv().to_transformation_matrix()
-        target_root_pose = target_wrist_pose @ root2wrist
-        robot.set_qpos(old_qpos)
 
-        euler = transforms3d.euler.mat2euler(target_root_pose[:3, :3], "rxyz")
+        robot.compute_forward_kinematics(new_qpos)
+        root2wrist = robot.get_link_pose_inv(wrist_link_id)
+        target_root_pose = target_wrist_pose @ root2wrist
+
+        euler = rotations.euler_from_matrix(target_root_pose[:3, :3], 0, 1, 2, extrinsic=False)
         pose_vec = np.concatenate([target_root_pose[:3, 3], euler])
 
         # Find the dummy joints
-        name_list = [
-            "dummy_x_translation_joint",
-            "dummy_y_translation_joint",
-            "dummy_z_translation_joint",
-            "dummy_x_rotation_joint",
-            "dummy_y_rotation_joint",
-            "dummy_z_rotation_joint",
-        ]
         for num, joint_name in enumerate(self.optimizer.target_joint_names):
             if joint_name in name_list:
                 index = name_list.index(joint_name)
@@ -114,8 +115,8 @@ class SeqRetargeting:
         self.num_retargeting += 1
         self.last_qpos = qpos
         robot_qpos = np.zeros(self.optimizer.robot.dof)
-        robot_qpos[self.optimizer.fixed_joint_indices] = fixed_qpos
-        robot_qpos[self.optimizer.target_joint_indices] = qpos
+        robot_qpos[self.optimizer.idx_pin2fixed] = fixed_qpos
+        robot_qpos[self.optimizer.idx_pin2target] = qpos
         if self.filter is not None:
             robot_qpos = self.filter.next(robot_qpos)
         return robot_qpos
@@ -126,5 +127,5 @@ class SeqRetargeting:
         print(f"Last distance: {min_value}")
 
     def reset(self):
-        self.last_qpos = self.joint_limits.mean(1)[self.optimizer.target_joint_indices]
+        self.last_qpos = self.joint_limits.mean(1)[self.optimizer.idx_pin2target]
         self.num_retargeting = 0

@@ -1,14 +1,17 @@
-import sapien.core as sapien
+# import sapien.core as sapien
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from typing import Union
 
 import numpy as np
 import yaml
 
 from dex_retargeting.optimizer_utils import LPFilter
+from dex_retargeting.robot_wrapper import RobotWrapper
 from dex_retargeting.seq_retarget import SeqRetargeting
+from dex_retargeting import yourdfpy as urdf
+from dex_retargeting.kinematics_adaptor import MimicJointKinematicAdaptor
 
 
 @dataclass
@@ -45,11 +48,11 @@ class RetargetingConfig:
     normal_delta: float = 4e-3
     huber_delta: float = 2e-2
 
-    # Constraint parameters
-    constraint_map: Optional[Dict[str, np.ndarray]] = None
-
     # Joint limit tag
     has_joint_limits: bool = True
+
+    # Mimic joint tag
+    ignore_mimic_joint: bool = False
 
     # Low pass filter
     low_pass_alpha: float = 0.1
@@ -125,35 +128,24 @@ class RetargetingConfig:
         config = RetargetingConfig(**cfg)
         return config
 
-    def build(self, scene: Optional[sapien.Scene] = None) -> SeqRetargeting:
+    def build(self) -> SeqRetargeting:
         from dex_retargeting.optimizer import (
             VectorOptimizer,
             PositionOptimizer,
             DexPilotAllegroOptimizer,
         )
-        from dex_retargeting.optimizer_utils import SAPIENKinematicsModelStandalone
-        from dex_retargeting import yourdfpy as urdf
         import tempfile
 
         # Process the URDF with yourdfpy to better find file path
-        robot_urdf = urdf.URDF.load(self.urdf_path)
+        robot_urdf = urdf.URDF.load(self.urdf_path, build_scene_graph=False)
         urdf_name = self.urdf_path.split("/")[-1]
         temp_dir = tempfile.mkdtemp(prefix="dex_retargeting-")
         temp_path = f"{temp_dir}/{urdf_name}"
         robot_urdf.write_xml_file(temp_path)
-        sapien_model = SAPIENKinematicsModelStandalone(
-            temp_path,
-            add_dummy_translation=self.add_dummy_free_joint,
-            add_dummy_rotation=self.add_dummy_free_joint,
-            scene=scene,
-        )
-        robot = sapien_model.robot
-        robot.set_name(Path(self.urdf_path).stem)
-        joint_names = (
-            self.target_joint_names
-            if self.target_joint_names is not None
-            else [joint.get_name() for joint in robot.get_active_joints()]
-        )
+
+        # Load pinocchio model
+        robot = RobotWrapper(temp_path)
+        joint_names = self.target_joint_names if self.target_joint_names is not None else robot.dof_joint_names
         if self.type == "position":
             optimizer = PositionOptimizer(
                 robot,
@@ -192,19 +184,51 @@ class RetargetingConfig:
         else:
             lp_filter = None
 
+        # Parse mimic joints and set kinematics adaptor for optimizer
+        has_mimic_joints, source_names, mimic_names, multipliers, offsets = parse_mimic_joint(robot_urdf)
+        if has_mimic_joints and not self.ignore_mimic_joint:
+            adaptor = MimicJointKinematicAdaptor(
+                robot,
+                target_joint_names=joint_names,
+                source_joint_names=source_names,
+                mimic_joint_names=mimic_names,
+                multipliers=multipliers,
+                offsets=offsets,
+            )
+            optimizer.set_kinematic_adaptor(adaptor)
+            print(
+                "\033[34m",
+                "Mimic joint adaptor enabled. The mimic joint tags in the URDF will be considered during retargeting.\n"
+                "To disable mimic joint adaptor, consider setting ignore_mimic_joint=True in the configuration.",
+                "\033[39m",
+            )
+
         retargeting = SeqRetargeting(
             optimizer,
             has_joint_limits=self.has_joint_limits,
             lp_filter=lp_filter,
         )
-        # TODO: hack here for SAPIEN
-        retargeting.scene = sapien_model.scene
         return retargeting
 
 
 def get_retargeting_config(config_path) -> RetargetingConfig:
     config = RetargetingConfig.load_from_file(config_path)
     return config
+
+
+def parse_mimic_joint(robot_urdf: urdf.URDF) -> Tuple[bool, List[str], List[str], List[float], List[float]]:
+    mimic_joint_names = []
+    source_joint_names = []
+    multipliers = []
+    offsets = []
+    for name, joint in robot_urdf.joint_map.items():
+        if joint.mimic is not None:
+            mimic_joint_names.append(name)
+            source_joint_names.append(joint.mimic.joint)
+            multipliers.append(joint.mimic.multiplier)
+            offsets.append(joint.mimic.offset)
+
+    return len(mimic_joint_names) > 0, source_joint_names, mimic_joint_names, multipliers, offsets
 
 
 if __name__ == "__main__":
