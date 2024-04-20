@@ -197,7 +197,7 @@ class RetargetingConfig:
             )
             optimizer.set_kinematic_adaptor(adaptor)
             print(
-                "\033[34m",
+                "\033[34m\n",
                 "Mimic joint adaptor enabled. The mimic joint tags in the URDF will be considered during retargeting.\n"
                 "To disable mimic joint adaptor, consider setting ignore_mimic_joint=True in the configuration.",
                 "\033[39m",

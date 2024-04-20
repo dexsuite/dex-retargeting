@@ -1,4 +1,4 @@
-from time import time
+import time
 from typing import Optional
 
 import numpy as np
@@ -26,10 +26,10 @@ class SeqRetargeting:
         if has_joint_limits:
             joint_limits[:] = robot.joint_limits[:]
             self.optimizer.set_joint_limit(joint_limits[self.optimizer.idx_pin2target])
-        self.joint_limits = joint_limits
+        self.joint_limits = joint_limits[self.optimizer.idx_pin2target]
 
         # Temporal information
-        self.last_qpos = joint_limits.mean(1)[self.optimizer.idx_pin2target]
+        self.last_qpos = joint_limits.mean(1)[self.optimizer.idx_pin2target].astype(np.float32)
         self.accumulated_time = 0
         self.num_retargeting = 0
 
@@ -105,18 +105,23 @@ class SeqRetargeting:
         self.is_warm_started = True
 
     def retarget(self, ref_value, fixed_qpos=np.array([])):
-        tic = time()
+        tic = time.perf_counter()
+
         qpos = self.optimizer.retarget(
             ref_value=ref_value.astype(np.float32),
             fixed_qpos=fixed_qpos.astype(np.float32),
-            last_qpos=self.last_qpos.astype(np.float32),
+            last_qpos=np.clip(self.last_qpos, self.joint_limits[:, 0], self.joint_limits[:, 1]),
         )
-        self.accumulated_time += time() - tic
+        self.accumulated_time += time.perf_counter() - tic
         self.num_retargeting += 1
         self.last_qpos = qpos
         robot_qpos = np.zeros(self.optimizer.robot.dof)
         robot_qpos[self.optimizer.idx_pin2fixed] = fixed_qpos
         robot_qpos[self.optimizer.idx_pin2target] = qpos
+
+        if self.optimizer.adaptor is not None:
+            robot_qpos = self.optimizer.adaptor.forward_qpos(robot_qpos)
+
         if self.filter is not None:
             robot_qpos = self.filter.next(robot_qpos)
         return robot_qpos
@@ -129,3 +134,8 @@ class SeqRetargeting:
     def reset(self):
         self.last_qpos = self.joint_limits.mean(1)[self.optimizer.idx_pin2target]
         self.num_retargeting = 0
+        self.accumulated_time = 0
+
+    @property
+    def joint_names(self):
+        return self.optimizer.robot.dof_joint_names

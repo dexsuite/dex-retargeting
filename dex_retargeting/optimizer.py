@@ -46,23 +46,14 @@ class Optimizer:
         # Kinematics adaptor
         self.adaptor: Optional[KinematicAdaptor] = None
 
-    def set_joint_limit(self, joint_limits: np.ndarray):
+    def set_joint_limit(self, joint_limits: np.ndarray, epsilon=1e-3):
         if joint_limits.shape != (self.opt_dof, 2):
             raise ValueError(f"Expect joint limits have shape: {(self.opt_dof, 2)}, but get {joint_limits.shape}")
-        self.opt.set_lower_bounds(joint_limits[:, 0].tolist())
-        self.opt.set_upper_bounds(joint_limits[:, 1].tolist())
+        self.opt.set_lower_bounds((joint_limits[:, 0] - epsilon).tolist())
+        self.opt.set_upper_bounds((joint_limits[:, 1] + epsilon).tolist())
 
     def get_link_indices(self, target_link_names):
         return [self.robot.get_link_index(link_name) for link_name in target_link_names]
-
-    def optimize(self, objective_fn, last_qpos):
-        self.opt.set_min_objective(objective_fn)
-        try:
-            qpos = self.opt.optimize(last_qpos)
-            return np.array(qpos)
-        except RuntimeError as e:
-            print(e)
-            return np.array(last_qpos)
 
     def set_kinematic_adaptor(self, adaptor: KinematicAdaptor):
         self.adaptor = adaptor
@@ -79,10 +70,15 @@ class Optimizer:
             raise ValueError(
                 f"Optimizer has {len(self.idx_pin2fixed)} joints but non_target_qpos {fixed_qpos} is given"
             )
-        if last_qpos is None:
-            last_qpos = self.robot.q0.copy()[self.idx_pin2target]
         objective_fn = self.get_objective_function(ref_value, fixed_qpos, np.array(last_qpos).astype(np.float32))
-        return np.array(self.optimize(objective_fn, last_qpos))
+
+        self.opt.set_min_objective(objective_fn)
+        try:
+            qpos = self.opt.optimize(last_qpos)
+            return np.array(qpos, dtype=np.float32)
+        except RuntimeError as e:
+            print(e)
+            return np.array(last_qpos, dtype=np.float32)
 
     @abstractmethod
     def get_objective_function(self, ref_value: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):

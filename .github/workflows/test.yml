@@ -2,7 +2,7 @@ name: Core Tests
 
 on:
   push:
-    branches: [ main, pin_dev ]
+    branches: [ main, dev ]
   pull_request:
 
 permissions:
