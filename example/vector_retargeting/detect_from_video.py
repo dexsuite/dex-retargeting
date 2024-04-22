@@ -45,8 +45,8 @@ def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: st
 
                 meta_data = dict(
                     config_path=config_path,
-                    dof=retargeting.optimizer.opt_dof,
-                    joint_names=retargeting.optimizer.target_joint_names,
+                    dof=len(retargeting.optimizer.robot.dof_joint_names),
+                    joint_names=retargeting.optimizer.robot.dof_joint_names,
                 )
 
                 output_path = Path(output_path)
