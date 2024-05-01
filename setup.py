@@ -16,7 +16,6 @@ with open(_here / name / "__init__.py") as f:
     else:
         raise RuntimeError("Unable to find __version__ string.")
 
-
 core_requirements = [
     "numpy",
     "pytransform3d",
@@ -27,7 +26,6 @@ core_requirements = [
     "pyyaml",
     "lxml",
 ]
-
 
 # Check whether you have torch installed
 torch_info = importlib.util.find_spec("torch")
@@ -51,7 +49,6 @@ else:
     )
 
     core_requirements.append("torch")
-
 
 dev_requirements = [
     "pytest",
@@ -109,6 +106,8 @@ def setup_package():
         packages=packages,
         python_requires=">=3.7,<3.11",
         zip_safe=True,
+        include_package_data=True,
+        package_data={'dex_retargeting': ['configs/**']},
         install_requires=core_requirements,
         extras_require={
             "dev": dev_requirements,
