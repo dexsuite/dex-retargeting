@@ -5,7 +5,7 @@ retargeting:
 
   # Target refers to the retargeting target, which is the robot hand
   target_joint_names: null
-  finger_tip_link_names: [ "link_15.0_tip", "link_3.0_tip", "link_7.0_tip", "link_11.0_tip" ]
+  finger_tip_link_names: [ "link_15.0_tip", "link_11.0_tip", "link_7.0_tip", "link_3.0_tip" ]
   scaling_factor: 1.6
 
   # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
