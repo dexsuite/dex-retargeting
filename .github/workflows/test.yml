@@ -26,6 +26,7 @@ jobs:
         run: |
           git submodule update --init
           python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install --upgrade -e .[dev]
       - name: Run Black
         run: |
