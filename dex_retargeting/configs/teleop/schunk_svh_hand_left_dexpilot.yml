@@ -1,0 +1,18 @@
+retargeting:
+  type: DexPilot
+  urdf_path: schunk_hand/schunk_svh_hand_left.urdf
+  wrist_link_name: "right_hand_base_link"
+
+  # Target refers to the retargeting target, which is the robot hand
+  target_joint_names: [ 'right_hand_Thumb_Opposition', 'right_hand_Thumb_Flexion', 'right_hand_Index_Finger_Proximal',
+                        'right_hand_Index_Finger_Distal', 'right_hand_Finger_Spread', 'right_hand_Pinky',
+                        'right_hand_Ring_Finger', 'right_hand_Middle_Finger_Proximal', 'right_hand_Middle_Finger_Distal' ]
+  finger_tip_link_names: [ "right_hand_c", "right_hand_t", "right_hand_s", "right_hand_r", "right_hand_q" ]
+  scaling_factor: 1.2
+
+  # Source refers to the retargeting input, which usually corresponds to the human hand
+  # The joint indices of human hand joint which corresponds to each link in the target_link_names
+  target_link_human_indices: [ [ 0, 0, 0, 0, 0 ], [ 4, 8, 12, 16, 20, ] ]
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  low_pass_alpha: 0.2

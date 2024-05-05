@@ -14,10 +14,19 @@ Dex Retargeting
 ## Installation
 
 ```shell
-pip3 install -e ".[example]"
-# If you do not need to run the examples:
-# pip install -e .
+# Install from pypi
+pip install dex_retargeting`` 
 
+# Or install from Github
+git clone https://github.com/dexsuite/dex-retargeting
+cd dex-retargeting
+pip install -e .
+```
+
+To run the example, you may need additional dependencies for rendering and hand pose detection.
+
+```shell
+pip install -e ".[example]"
 ```
 
 ## Examples
