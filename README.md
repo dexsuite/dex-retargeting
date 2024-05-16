@@ -79,7 +79,3 @@ methodologies from our earlier
 project, [From One Hand to Multiple Hands](https://yzqin.github.io/dex-teleop-imitation/). Additionally,
 the [DexPilotOptimizer](https://github.com/dexsuite/dex-retargeting/blob/main/dex_retargeting/optimizer.py) is crafted
 using insights from [DexPilot](https://sites.google.com/view/dex-pilot).
-
-## License and Disclaimer
-
-Web-Based Visualizer for Simulation Environments is released under the [MIT License](LICENSE).
