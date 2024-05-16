@@ -65,7 +65,17 @@ class Optimizer:
             new_fixed_id = np.array([x for x in fixed_idx if x not in mimic_idx], dtype=int)
             self.idx_pin2fixed = new_fixed_id
 
-    def retarget(self, ref_value, fixed_qpos, last_qpos=None):
+    def retarget(self, ref_value, fixed_qpos, last_qpos):
+        """
+        Compute the retargeting results using non-linear optimization
+        Args:
+            ref_value: the reference value in cartesian space as input, different optimizer has different reference
+            fixed_qpos: the fixed value (not optimized) in retargeting, consistent with self.fixed_joint_names
+            last_qpos: the last retargeting results or initial value, consistent with function return
+
+        Returns: joint position of robot, the joint order and dim is consistent with self.target_joint_names
+
+        """
         if len(fixed_qpos) != len(self.idx_pin2fixed):
             raise ValueError(
                 f"Optimizer has {len(self.idx_pin2fixed)} joints but non_target_qpos {fixed_qpos} is given"
@@ -83,6 +93,11 @@ class Optimizer:
     @abstractmethod
     def get_objective_function(self, ref_value: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
         pass
+
+    @property
+    def fixed_joint_names(self):
+        joint_names = self.robot.dof_joint_names
+        return [joint_names[i] for i in self.idx_pin2fixed]
 
 
 class PositionOptimizer(Optimizer):

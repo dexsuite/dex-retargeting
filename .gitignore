@@ -14,4 +14,7 @@ imgui.ini
 .DS_Store
 /.idea
 /log
-/example/data/output_*.mp4
+
+# Examples
+/example/vector_retargeting/data/
+!example/vector_retargeting/data/human_hand_video.mp4
