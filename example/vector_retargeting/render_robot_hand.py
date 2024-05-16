@@ -11,6 +11,9 @@ from sapien.utils import Viewer
 
 from dex_retargeting.retargeting_config import RetargetingConfig
 
+# Convert webp
+# ffmpeg -i teaser.mp4 -vcodec libwebp -lossless 1 -loop 0 -preset default  -an -vsync 0 teaser.webp
+
 
 def render_by_sapien(
     meta_data: Dict,
