@@ -1,39 +1,43 @@
-Dex Retargeting
----
+<div align="center">
+  <h1 align="center"> Dex Retargeting </h1>
+  <h3 align="center">
+    Various retargeting optimizers to translate human hand motion to robot hand motion.
+  </h3>
+</div>
 <p align="center">
-    <!-- code check badges -->
-    <a href='https://github.com/dexsuite/dex-retargeting/blob/main/.github/workflows/test.yml'>
-        <img src='https://github.com/dexsuite/dex-retargeting/actions/workflows/test.yml/badge.svg' alt='Test Status' />
-    </a>
-    <!-- issue badge -->
-    <a href="https://github.com/dexsuite/dex-retargeting/issues">
-    <img src="https://img.shields.io/github/issues/dexsuite/dex-retargeting.svg" alt="Issues">
-    </a>
-    <!-- release badge -->
-    <a href="https://github.com/dexsuite/dex-retargeting/tags">
-    <img src="https://img.shields.io/github/v/release/dexsuite/dex-retargeting.svg?include_prereleases&sort=semver" alt="Releases">
-    </a>
-    <!-- license badge -->
-    <a href="https://github.com/dexsuite/dex-retargeting/blob/main/LICENSE">
-        <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
-    </a>
+  <!-- code check badges -->
+  <a href='https://github.com/dexsuite/dex-retargeting/blob/main/.github/workflows/test.yml'>
+      <img src='https://github.com/dexsuite/dex-retargeting/actions/workflows/test.yml/badge.svg' alt='Test Status' />
+  </a>
+  <!-- issue badge -->
+  <a href="https://github.com/dexsuite/dex-retargeting/issues">
+  <img src="https://img.shields.io/github/issues/dexsuite/dex-retargeting.svg" alt="Issues">
+  </a>
+  <!-- release badge -->
+  <a href="https://github.com/dexsuite/dex-retargeting/tags">
+  <img src="https://img.shields.io/github/v/release/dexsuite/dex-retargeting.svg?include_prereleases&sort=semver" alt="Releases">
+  </a>
+  <!-- license badge -->
+  <a href="https://github.com/dexsuite/dex-retargeting/blob/main/LICENSE">
+      <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
+  </a>
 </p>
+<div align="center">
+  <h3>This repo is part of the <a href="https://yzqin.github.io/anyteleop/">AnyTeleop Project</a></h3>
+</div>
 
 ## Installation
 
 ```shell
-# Install from pypi
-pip install dex_retargeting`` 
+pip install dex_retargeting
 
-# Or install from Github
-git clone https://github.com/dexsuite/dex-retargeting
-cd dex-retargeting
-pip install -e .
 ```
 
 To run the example, you may need additional dependencies for rendering and hand pose detection.
 
 ```shell
+git clone https://github.com/dexsuite/dex-retargeting
+cd dex-retargeting
 pip install -e ".[example]"
 ```
 
