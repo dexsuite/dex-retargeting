@@ -277,7 +277,7 @@ class VectorOptimizer(Optimizer):
         return objective
 
 
-class DexPilotAllegroOptimizer(Optimizer):
+class DexPilotOptimizer(Optimizer):
     """Retargeting optimizer using the method proposed in DexPilot
 
     This is a broader adaptation of the original optimizer delineated in the DexPilot paper.

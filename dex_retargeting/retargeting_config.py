@@ -1,4 +1,3 @@
-# import sapien.core as sapien
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
@@ -132,7 +131,7 @@ class RetargetingConfig:
         from dex_retargeting.optimizer import (
             VectorOptimizer,
             PositionOptimizer,
-            DexPilotAllegroOptimizer,
+            DexPilotOptimizer,
         )
         import tempfile
 
@@ -169,7 +168,7 @@ class RetargetingConfig:
                 huber_delta=self.huber_delta,
             )
         elif self.type == "dexpilot":
-            optimizer = DexPilotAllegroOptimizer(
+            optimizer = DexPilotOptimizer(
                 robot,
                 joint_names,
                 finger_tip_link_names=self.finger_tip_link_names,
