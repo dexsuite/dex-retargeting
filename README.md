@@ -23,14 +23,14 @@
   </a>
 </p>
 <div align="center">
-  <h3>This repo is part of the <a href="https://yzqin.github.io/anyteleop/">AnyTeleop Project</a></h3>
+  <h4>This repo is part of the <a href="https://yzqin.github.io/anyteleop/">AnyTeleop Project</a></h4>
+  <img src="example/vector_retargeting/teaser.webp" alt="Retargeting with different hands.">
 </div>
 
 ## Installation
 
 ```shell
 pip install dex_retargeting
-
 ```
 
 To run the example, you may need additional dependencies for rendering and hand pose detection.
@@ -45,9 +45,14 @@ pip install -e ".[example]"
 
 ### Retargeting from human hand video
 
+This type of retargeting can be used for applications like teleoperation.
+
 [Tutorial on retargeting from human hand video](example/vector_retargeting/README.md)
 
 ### Retarget from hand object pose dataset
+
+This type of retargeting can be used post-process human data for robot imitation,
+e.g. [DexMV](https://yzqin.github.io/dexmv/).
 
 [Tutorial on retargeting from hand-object pose dataset](example/position_retargeting/README.md)
 

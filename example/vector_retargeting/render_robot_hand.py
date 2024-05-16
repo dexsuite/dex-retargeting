@@ -1,10 +1,13 @@
 from pathlib import Path
-from typing import Dict, List, Union, Optional
+from typing import Optional, List, Union, Dict
 
 import cv2
 import numpy as np
+import sapien
 import tqdm
 import tyro
+from sapien.asset import create_dome_envmap
+from sapien.utils import Viewer
 
 from dex_retargeting.retargeting_config import RetargetingConfig
 
@@ -15,72 +18,103 @@ def render_by_sapien(
     output_video_path: Optional[str] = None,
     headless: Optional[bool] = False,
 ):
-    import sapien.core as sapien
-    from sapien.asset import create_dome_envmap
-    from sapien.utils.viewer import Viewer
+    # Generate rendering config
+    use_rt = True
+    if not use_rt:
+        sapien.render.set_viewer_shader_dir("default")
+        sapien.render.set_camera_shader_dir("default")
+    else:
+        sapien.render.set_viewer_shader_dir("rt")
+        sapien.render.set_camera_shader_dir("rt")
+        sapien.render.set_ray_tracing_samples_per_pixel(16)
+        sapien.render.set_ray_tracing_path_depth(8)
+        sapien.render.set_ray_tracing_denoiser("oidn")
 
     # Config is loaded only to find the urdf path and robot name
     config_path = meta_data["config_path"]
     config = RetargetingConfig.load_from_file(config_path)
 
-    engine = sapien.Engine()
-    engine.set_log_level("warning")
+    # Setup
+    scene = sapien.Scene()
 
-    record_video = output_video_path is not None
-    if not record_video:
-        sapien.render_config.camera_shader_dir = "rt"
-        sapien.render_config.viewer_shader_dir = "rt"
-        sapien.render_config.rt_samples_per_pixel = 32
-        sapien.render_config.rt_use_denoiser = True
+    # Ground
+    render_mat = sapien.render.RenderMaterial()
+    render_mat.base_color = [0.06, 0.08, 0.12, 1]
+    render_mat.metallic = 0.0
+    render_mat.roughness = 0.9
+    render_mat.specular = 0.8
+    scene.add_ground(-0.2, render_material=render_mat, render_half_size=[1000, 1000])
 
-    renderer = sapien.SapienRenderer(offscreen_only=headless)
-    engine.set_renderer(renderer)
-
-    scene_config = sapien.SceneConfig()
-    scene = engine.create_scene(scene_config)
-    scene.set_timestep(1 / 240)
+    # Lighting
+    scene.add_directional_light(np.array([1, 1, -1]), np.array([3, 3, 3]))
+    scene.add_point_light(np.array([2, 2, 2]), np.array([2, 2, 2]), shadow=False)
+    scene.add_point_light(np.array([2, -2, 2]), np.array([2, 2, 2]), shadow=False)
     scene.set_environment_map(create_dome_envmap(sky_color=[0.2, 0.2, 0.2], ground_color=[0.2, 0.2, 0.2]))
-    scene.add_directional_light([-1, 0.5, -1], color=[2.0, 2.0, 2.0], shadow=True, scale=2.0, shadow_map_size=4096)
+    scene.add_area_light_for_ray_tracing(sapien.Pose([2, 1, 2], [0.707, 0, 0.707, 0]), np.array([1, 1, 1]), 5, 5)
+
+    # Camera
+    cam = scene.add_camera(name="Cheese!", width=600, height=600, fovy=1, near=0.1, far=10)
+    cam.set_local_pose(sapien.Pose([0.50, 0, 0.0], [0, 0, 0, -1]))
+
+    # Viewer
+    if not headless:
+        viewer = Viewer()
+        viewer.set_scene(scene)
+        viewer.control_window.show_origin_frame = False
+        viewer.control_window.move_speed = 0.01
+        viewer.control_window.toggle_camera_lines(False)
+        viewer.set_camera_pose(cam.get_local_pose())
+    else:
+        viewer = None
+    record_video = output_video_path is not None
 
     # Load robot and set it to a good pose to take picture
     loader = scene.create_urdf_loader()
-    robot = loader.load(config.urdf_path)
-    robot_file_name = Path(config.urdf_path).stem
-    if "shadow" in robot_file_name:
-        robot.set_pose(sapien.Pose([0, 0, -0.3]))
-    elif "svh" in robot_file_name:
+    filepath = Path(config.urdf_path)
+    robot_name = filepath.stem
+    loader.load_multiple_collisions_from_file = True
+    if "ability" in robot_name:
+        loader.scale = 1.5
+    elif "dclaw" in robot_name:
+        loader.scale = 1.25
+    elif "allegro" in robot_name:
+        loader.scale = 1.4
+    elif "shadow" in robot_name:
+        loader.scale = 0.9
+    elif "bhand" in robot_name:
+        loader.scale = 1.5
+    elif "leap" in robot_name:
+        loader.scale = 1.4
+    elif "svh" in robot_name:
+        loader.scale = 1.5
+
+    if "glb" not in robot_name:
+        filepath = str(filepath).replace(".urdf", "_glb.urdf")
+    else:
+        filepath = str(filepath)
+    robot = loader.load(filepath)
+
+    if "ability" in robot_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.15]))
+    elif "shadow" in robot_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.2]))
+    elif "dclaw" in robot_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.15]))
+    elif "allegro" in robot_name:
         robot.set_pose(sapien.Pose([0, 0, -0.05]))
-    elif "dlr" in robot_file_name:
-        robot.set_pose(sapien.Pose([0, 0, -0.08]))
-    elif "leap" in robot_file_name:
-        robot.set_pose(sapien.Pose([0, 0, -0.1]))
-    else:
-        robot.set_pose(sapien.Pose([0, 0, 0.0]))
+    elif "bhand" in robot_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.2]))
+    elif "leap" in robot_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.15]))
+    elif "svh" in robot_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.13]))
 
-    # Modify robot visual to make it pure white
-    for actor in robot.get_links():
-        for visual in actor.get_visual_bodies():
-            for mesh in visual.get_render_shapes():
-                mat = mesh.material
-                mat.set_base_color(np.array([0.3, 0.3, 0.3, 1]))
-                mat.set_specular(0.7)
-                mat.set_metallic(0.1)
-
-    cam = scene.add_camera(name="Cheese!", width=1280, height=720, fovy=1, near=0.1, far=10)
-    cam.set_local_pose(sapien.Pose([0.313487, 0.0653831, -0.0111697], [0.088142, -0.0298786, -0.00264502, -0.995656]))
-
-    # Setup onscreen viewer if not headless
-    if not headless:
-        viewer = Viewer(renderer)
-        viewer.set_scene(scene)
-        viewer.focus_camera(cam)
-        viewer.toggle_axes(False)
-        viewer.toggle_camera_lines(False)
-    else:
-        viewer = None
-
-    # Setup video recorder
-    writer = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (1280, 720))
+    # Video recorder
+    if record_video:
+        Path(output_video_path).parent.mkdir(parents=True, exist_ok=True)
+        writer = cv2.VideoWriter(
+            output_video_path, cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (cam.get_width(), cam.get_height())
+        )
 
     # Different robot loader may have different orders for joints
     sapien_joint_names = [joint.get_name() for joint in robot.get_active_joints()]
@@ -96,12 +130,8 @@ def render_by_sapien(
         if record_video:
             scene.update_render()
             cam.take_picture()
-            rgb = cam.get_texture("Color")[..., :3]
+            rgb = cam.get_picture("Color")[..., :3]
             rgb = (np.clip(rgb, 0, 1) * 255).astype(np.uint8)
-
-            # Use segmentation mask to paint background to white
-            seg = cam.get_visual_actor_segmentation()[..., 0] < 1
-            rgb[seg, :] = [255, 255, 255]
             writer.write(rgb[..., ::-1])
 
     if record_video:
@@ -112,7 +142,6 @@ def render_by_sapien(
 
 def main(
     pickle_path: str,
-    renderer_name: str = "sapien",
     output_video_path: Optional[str] = None,
     headless: bool = False,
 ):
@@ -121,26 +150,17 @@ def main(
 
     Args:
         pickle_path: Path to the .pickle file, created by `detect_from_video.py`.
-        renderer_name: Specifies the renderer to be used. It should be one from [sapien, sim_web_visualizer, trimesh].
         output_video_path: Path where the output video in .mp4 format would be saved.
             By default, it is set to None, implying no video will be saved.
         headless: Set to visualize the rendering on the screen by opening the viewer window.
     """
     robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
-    supported_renderer = ["sapien", "sim_web_visualizer", "trimesh"]
 
     pickle_data = np.load(pickle_path, allow_pickle=True)
     meta_data, data = pickle_data["meta_data"], pickle_data["data"]
 
-    if renderer_name == "sapien":
-        render_by_sapien(meta_data, data, output_video_path, headless)
-    elif renderer_name == "sim_web_visualizer":
-        raise NotImplementedError
-    elif renderer_name == "trimesh":
-        raise NotImplementedError
-    else:
-        raise ValueError(f"Renderer name should be one of the following: {supported_renderer}")
+    render_by_sapien(meta_data, data, output_video_path, headless)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ cd example/vector_retargeting
 python3 detect_from_video.py \
   --robot-name allegro \
   --video-path data/human_hand_video.mp4 \
-  --retargeting-type vector \
+  --retargeting-type dexpilot \
   --hand-type right \
   --output-path data/allegro_joints.pkl 
 ```
@@ -28,7 +28,7 @@ python3 detect_from_video.py --help
 ```shell
 python3 render_robot_hand.py \
   --pickle-path data/allegro_joints.pkl \
-  --output-video-path data/retargeted_allegro.mp4 \
+  --output-video-path data/allegro.mp4 \
   --headless
 ```
 
