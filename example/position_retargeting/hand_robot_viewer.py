@@ -1,10 +1,12 @@
+import tempfile
 from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
-import sapien.core as sapien
+import sapien
 import transforms3d.quaternions
 
+from dex_retargeting import yourdfpy as urdf
 from dex_retargeting.constants import RobotName, HandType, get_default_config_path, RetargetingType
 from dex_retargeting.retargeting_config import RetargetingConfig
 from dex_retargeting.seq_retarget import SeqRetargeting
@@ -32,24 +34,6 @@ def prepare_vector_retargeting(joint_pos: np.array, link_hand_indices_pairs: np.
     return task_link_pos - origin_link_pos
 
 
-class LPFilter:
-    def __init__(self, control_freq, cutoff_freq):
-        dt = 1 / control_freq
-        wc = cutoff_freq * 2 * np.pi
-        y_cos = 1 - np.cos(wc * dt)
-        self.alpha = -y_cos + np.sqrt(y_cos**2 + 2 * y_cos)
-        self.y = 0
-        self.is_init = False
-
-    def next(self, x):
-        self.y = self.y + self.alpha * (x - self.y)
-        return self.y.copy()
-
-    def init(self, y):
-        self.y = y.copy()
-        self.is_init = True
-
-
 class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
     def __init__(self, robot_names: List[RobotName], hand_type: HandType, headless=False, use_ray_tracing=False):
         super().__init__(headless=headless, use_ray_tracing=use_ray_tracing)
@@ -57,20 +41,39 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
         self.robots: List[sapien.Articulation] = []
         self.robot_file_names: List[str] = []
         self.retargetings: List[SeqRetargeting] = []
+        self.retarget2sapien: List[np.ndarray] = []
 
         # Load optimizer and filter
+        loader = self.scene.create_urdf_loader()
+        loader.fix_root_link = True
+        loader.load_multiple_collisions_from_file = True
         for robot_name in robot_names:
             config_path = get_default_config_path(robot_name, RetargetingType.position, hand_type)
 
             # Add 6-DoF dummy joint at the root of each robot to make them move freely in the space
             override = dict(add_dummy_free_joint=True)
             config = RetargetingConfig.load_from_file(config_path, override=override)
-            retargeting = config.build(self.scene)
-            robot = retargeting.optimizer.robot
+            retargeting = config.build()
             robot_file_name = Path(config.urdf_path).stem
-            self.robots.append(robot)
             self.robot_file_names.append(robot_file_name)
             self.retargetings.append(retargeting)
+
+            # Build robot
+            urdf_path = Path(config.urdf_path)
+            if "glb" not in urdf_path.stem:
+                urdf_path = str(urdf_path).replace(".urdf", "_glb.urdf")
+
+            robot_urdf = urdf.URDF.load(str(urdf_path), add_dummy_free_joints=True, build_scene_graph=False)
+            urdf_name = urdf_path.split("/")[-1]
+            temp_dir = tempfile.mkdtemp(prefix="dex_retargeting-")
+            temp_path = f"{temp_dir}/{urdf_name}"
+            robot_urdf.write_xml_file(temp_path)
+
+            robot = loader.load(temp_path)
+            self.robots.append(robot)
+            sapien_joint_names = [joint.name for joint in robot.get_active_joints()]
+            retarget2sapien = np.array([retargeting.joint_names.index(n) for n in sapien_joint_names]).astype(int)
+            self.retarget2sapien.append(retarget2sapien)
 
     def load_object_hand(self, data: Dict):
         super().load_object_hand(data)
@@ -86,7 +89,7 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
     def render_dexycb_data(self, data: Dict, fps=5, y_offset=0.8):
         # Set table and viewer pose for better visual effect only
         global_y_offset = -y_offset * len(self.robots) / 2
-        self.table.set_pose(sapien.Pose([0.5, global_y_offset, 0]))
+        self.table.set_pose(sapien.Pose([0.5, global_y_offset + 0.2, 0]))
         if self.viewer is not None:
             self.viewer.set_camera_xyz(1.5, global_y_offset, 1)
 
@@ -132,14 +135,14 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
             self._update_hand(vertex)
 
             # Update poses for robot hands
-            for robot, retargeting in zip(self.robots, self.retargetings):
+            for robot, retargeting, retarget2sapien in zip(self.robots, self.retargetings, self.retarget2sapien):
                 indices = retargeting.optimizer.target_link_human_indices
                 ref_value = joint[indices, :]
-                qpos = retargeting.retarget(ref_value)
+                qpos = retargeting.retarget(ref_value)[retarget2sapien]
                 robot.set_qpos(qpos)
 
             for k in range(60 // fps):
                 self.viewer.render()
 
-        self.viewer.toggle_pause(True)
+        self.viewer.paused = True
         self.viewer.render()

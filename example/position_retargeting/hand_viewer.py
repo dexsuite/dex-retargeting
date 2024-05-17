@@ -1,10 +1,12 @@
 from typing import Dict, List, Optional
 
 import numpy as np
+import sapien
 import sapien.core as sapien
 import torch
+from pytransform3d import transformations as pt
+from sapien import internal_renderer as R
 from sapien.asset import create_dome_envmap
-from sapien.core.pysapien import renderer as R
 from sapien.utils import Viewer
 
 from dataset import YCB_CLASSES
@@ -39,25 +41,18 @@ def compute_smooth_shading_normal_np(vertices, indices):
 class HandDatasetSAPIENViewer:
     def __init__(self, headless=False, use_ray_tracing=False):
         # Setup
-        engine = sapien.Engine()
-        engine.set_log_level("warning")
-
-        if use_ray_tracing:
-            sapien.render_config.camera_shader_dir = "rt"
-            sapien.render_config.viewer_shader_dir = "rt"
-            sapien.render_config.rt_samples_per_pixel = 32
-            sapien.render_config.rt_use_denoiser = True
+        if not use_ray_tracing:
+            sapien.render.set_viewer_shader_dir("default")
+            sapien.render.set_camera_shader_dir("default")
         else:
-            sapien.render_config.camera_shader_dir = "ibl"
-            sapien.render_config.viewer_shader_dir = "ibl"
-
-        renderer = sapien.SapienRenderer(offscreen_only=headless)
-        engine.set_renderer(renderer)
-        renderer.set_log_level("error")
+            sapien.render.set_viewer_shader_dir("rt")
+            sapien.render.set_camera_shader_dir("rt")
+            sapien.render.set_ray_tracing_samples_per_pixel(16)
+            sapien.render.set_ray_tracing_path_depth(8)
+            sapien.render.set_ray_tracing_denoiser("oidn")
 
         # Scene
-        scene_config = sapien.SceneConfig()
-        scene = engine.create_scene(scene_config)
+        scene = sapien.Scene()
         scene.set_timestep(1 / 240)
 
         # Lighting
@@ -75,7 +70,7 @@ class HandDatasetSAPIENViewer:
         )
 
         # Add ground
-        visual_material = renderer.create_material()
+        visual_material = sapien.render.RenderMaterial()
         visual_material.set_base_color(np.array([0.5, 0.5, 0.5, 1]))
         visual_material.set_roughness(0.7)
         visual_material.set_metallic(1)
@@ -84,16 +79,16 @@ class HandDatasetSAPIENViewer:
 
         # Viewer
         if not headless:
-            viewer = Viewer(renderer)
+            viewer = Viewer()
             viewer.set_scene(scene)
             viewer.set_camera_xyz(1.5, 0, 1)
             viewer.set_camera_rpy(0, -0.6, 3.14)
-            viewer.toggle_axes(0)
+            viewer.control_window.toggle_origin_frame(False)
             self.viewer = viewer
         self.gui = not headless
 
-        # Table
-        white_diffuse = renderer.create_material()
+        # Create table
+        white_diffuse = sapien.render.RenderMaterial()
         white_diffuse.set_base_color(np.array([0.8, 0.8, 0.8, 1]))
         white_diffuse.set_roughness(0.9)
         builder = scene.create_actor_builder()
@@ -115,17 +110,16 @@ class HandDatasetSAPIENViewer:
         self.table.set_pose(sapien.Pose([0.5, 0, 0]))
 
         # Caches
-        self.engine = engine
-        self.renderer = renderer
+        sapien.render.set_log_level("error")
         self.scene = scene
-        self.internal_scene: R.Scene = scene.get_renderer_scene()._internal_scene
-        self.context: R.Context = renderer._internal_context
+        self.internal_scene: R.Scene = scene.render_system._internal_scene
+        self.context: R.Context = sapien.render.SapienRenderer()._internal_context
         self.mat_hand = self.context.create_material(np.zeros(4), np.array([0.96, 0.75, 0.69, 1]), 0.0, 0.8, 0)
 
         self.mano_layer: Optional[MANOLayer] = None
         self.mano_face: Optional[np.ndarray] = None
         self.camera_pose: Optional[sapien.Pose] = None
-        self.objects: List[sapien.ActorStatic] = []
+        self.objects: List[sapien.Entity] = []
         self.nodes: List[R.Node] = []
 
     def clear_all(self):
@@ -152,7 +146,8 @@ class HandDatasetSAPIENViewer:
 
         self.mano_layer = MANOLayer("right", hand_shape.astype(np.float32))
         self.mano_face = self.mano_layer.f.cpu().numpy()
-        self.camera_pose = sapien.Pose.from_transformation_matrix(extrinsic_mat).inv()
+        pose_vec = pt.pq_from_transform(extrinsic_mat)
+        self.camera_pose = sapien.Pose(pose_vec[0:3], pose_vec[3:7]).inv()
 
     def _load_ycb_object(self, ycb_id, ycb_mesh_file):
         builder = self.scene.create_actor_builder()
@@ -213,5 +208,5 @@ class HandDatasetSAPIENViewer:
             for _ in range(step_per_frame):
                 self.viewer.render()
 
+        self.viewer.paused = True
         self.viewer.render()
-        self.viewer.toggle_pause(True)
