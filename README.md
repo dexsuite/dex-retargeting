@@ -23,7 +23,7 @@
   </a>
 </p>
 <div align="center">
-  <h4>This repo is part of the <a href="https://yzqin.github.io/anyteleop/">AnyTeleop Project</a></h4>
+  <h4>This repo originates from <a href="https://yzqin.github.io/anyteleop/">AnyTeleop Project</a></h4>
   <img src="example/vector_retargeting/teaser.webp" alt="Retargeting with different hands.">
 </div>
 
@@ -58,8 +58,8 @@ e.g. [DexMV](https://yzqin.github.io/dexmv/).
 
 ## Citation
 
-This repository is a part of the [AnyTeleop Project](https://yzqin.github.io/anyteleop/). If you use this work, kindly
-reference it as:
+This repository is derived from the [AnyTeleop Project](https://yzqin.github.io/anyteleop/) and is subject to ongoing
+enhancements. If you utilize this work, please cite it as follows:
 
 ```shell
 @inproceedings{qin2023anyteleop,
