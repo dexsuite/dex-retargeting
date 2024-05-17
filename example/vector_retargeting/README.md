@@ -1,5 +1,7 @@
 ## Retarget Robot Motion from Human Hand Video
 
+![teaser](teaser.webp)
+
 ### Generate the robot joint pose trajectory from our pre-recorded video
 
 ```shell

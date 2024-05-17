@@ -1,6 +1,6 @@
-# Retarget Robot Motion from Hand Object Pose Dataset
+## Retarget Robot Motion from Hand Object Pose Dataset
 
-## Setting up DexYCB Dataset
+### Setting up DexYCB Dataset
 
 This example illustrates how you can utilize the impressive DexYCB dataset to create a robot motion trajectory.
 The [DexYCB](https://dex-ycb.github.io/) is a hand-object dataset developed by NVIDIA.
@@ -35,7 +35,7 @@ Counter({'002_master_chef_can': 12, '005_tomato_soup_can': 9, '004_sugar_box': 6
 dict_keys(['hand_pose', 'object_pose', 'extrinsics', 'ycb_ids', 'hand_shape', 'object_mesh_file', 'capture_name'])
 ```
 
-## Setting up manopth
+### Setting up manopth
 
 Now, we will set up manopth similar to how it is done in [dex-ycb-toolkit](https://github.com/NVlabs/dex-ycb-toolkit).
 
@@ -59,13 +59,13 @@ Now, we will set up manopth similar to how it is done in [dex-ycb-toolkit](https
     ln -s ../mano_v1_2/models models
     ```
 
-## Installing Additional Python Dependencies
+### Installing Additional Python Dependencies
 
 ```shell
 pip install tyro pyyaml sapien==3.0.0b0
 ```
 
-## Visualizing Human Hand-Object Interaction
+### Visualizing Human Hand-Object Interaction
 
 Before proceeding to retargeting, we can first visualize the original dataset in SAPIEN renderer. The hand mesh is
 computed via manopth.
@@ -75,7 +75,7 @@ python visualize_hand_object.py --dexycb-dir=PATH_TO_YOUR_DEXYCB_DIR_ROOT
 # Close the viewer window to quit
 ```
 
-## Visualizing Robot Hand-Object Interaction
+### Visualizing Robot Hand-Object Interaction
 
 Visualize the retargeting results for multiple robot hands along with the human hand.
 

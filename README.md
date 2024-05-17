@@ -45,7 +45,8 @@ pip install -e ".[example]"
 
 ### Retargeting from human hand video
 
-This type of retargeting can be used for applications like teleoperation.
+This type of retargeting can be used for applications like teleoperation, 
+e.g. [AnyTeleop](https://yzqin.github.io/anyteleop/).
 
 [Tutorial on retargeting from human hand video](example/vector_retargeting/README.md)
 
