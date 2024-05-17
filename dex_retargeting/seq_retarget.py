@@ -52,8 +52,6 @@ class SeqRetargeting:
             wrist_orientation: orientation of the hand orientation, typically from human hand pose in MANO convention
             global_rot:
 
-        Returns:
-
         """
         # This function can only be used when the first joints of robot are free joints
         if len(wrist_pos) != 3:

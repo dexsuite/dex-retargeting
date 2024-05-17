@@ -893,7 +893,7 @@ class URDF:
                 self._errors.append(URDFAttributeValueError(error_msg))
 
     @staticmethod
-    def load(fname_or_file, **kwargs):
+    def load(fname_or_file, add_dummy_free_joints=False, **kwargs):
         """Load URDF file from filename or file object.
 
         Args:
@@ -947,7 +947,9 @@ class URDF:
         etree.strip_tags(xml_root, etree.Comment)
         etree.cleanup_namespaces(xml_root)
 
-        return URDF(robot=URDF._parse_robot(xml_element=xml_root), **kwargs)
+        return URDF(
+            robot=URDF._parse_robot(xml_element=xml_root, add_dummy_free_joints=add_dummy_free_joints), **kwargs
+        )
 
     def contains(self, key, value, element=None) -> bool:
         """Checks recursively whether the URDF tree contains the provided key-value pair.
@@ -2060,7 +2062,7 @@ class URDF:
         self._write_dynamics(xml_element, joint.dynamics)
 
     @staticmethod
-    def _parse_robot(xml_element):
+    def _parse_robot(xml_element, add_dummy_free_joints=False):
         robot = Robot(name=xml_element.attrib["name"])
 
         for l in xml_element.findall("link"):
@@ -2069,6 +2071,19 @@ class URDF:
             robot.joints.append(URDF._parse_joint(j))
         for m in xml_element.findall("material"):
             robot.materials.append(URDF._parse_material(m))
+
+        if add_dummy_free_joints:
+            # Determine root link
+            link_names = [l.name for l in robot.links]
+            for j in robot.joints:
+                link_names.remove(j.child)
+
+            if len(link_names) == 0:
+                raise RuntimeError(f"No root link found for robot.")
+
+            root_link_name = link_names[0]
+            _add_dummy_joints(robot, root_link_name)
+
         return robot
 
     def _validate_robot(self, robot):
@@ -2176,3 +2191,47 @@ class URDF:
         node = anytree.search.findall_by_attr(self.tree_root, link_name)[0]
 
         return node.global_pose
+
+
+def _add_dummy_joints(robot: Robot, root_link_name: str):
+    # Prepare link and joint properties
+    translation_range = (-5, 5)
+    rotation_range = (-2 * np.pi, 2 * np.pi)
+    joint_types = ["prismatic"] * 3 + ["revolute"] * 3
+    joint_limit = [translation_range] * 3 + [rotation_range] * 3
+    joint_name = DUMMY_JOINT_NAMES.copy()
+    link_name = [f"dummy_{name}_translation_link" for name in "xyz"] + [f"dummy_{name}_rotation_link" for name in "xyz"]
+
+    links = []
+    joints = []
+
+    for i in range(6):
+        inertial = Inertial(
+            mass=0.01, inertia=np.array([[1e-4, 0, 0], [0, 1e-4, 0], [0, 0, 1e-4]]), origin=np.identity(4)
+        )
+        link = Link(name=link_name[i], inertial=inertial)
+        links.append(link)
+
+        joint_axis = np.zeros(3, dtype=int)
+        joint_axis[i % 3] = 1
+        limit = Limit(lower=joint_limit[i][0], upper=joint_limit[i][1], velocity=3.14, effort=10)
+
+        child_name = link_name[i + 1] if i < 5 else root_link_name
+        joint = Joint(
+            name=joint_name[i],
+            type=joint_types[i],
+            parent=link_name[i],
+            child=child_name,
+            origin=np.identity(4),
+            axis=joint_axis,
+            limit=limit,
+        )
+        joints.append(joint)
+
+    robot.joints = joints + robot.joints
+    robot.links = links + robot.links
+
+
+DUMMY_JOINT_NAMES = [f"dummy_{name}_translation_joint" for name in "xyz"] + [
+    f"dummy_{name}_rotation_joint" for name in "xyz"
+]

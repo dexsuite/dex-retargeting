@@ -6,11 +6,12 @@ from typing import Union
 import numpy as np
 import yaml
 
+from dex_retargeting import yourdfpy as urdf
+from dex_retargeting.kinematics_adaptor import MimicJointKinematicAdaptor
 from dex_retargeting.optimizer_utils import LPFilter
 from dex_retargeting.robot_wrapper import RobotWrapper
 from dex_retargeting.seq_retarget import SeqRetargeting
-from dex_retargeting import yourdfpy as urdf
-from dex_retargeting.kinematics_adaptor import MimicJointKinematicAdaptor
+from dex_retargeting.yourdfpy import DUMMY_JOINT_NAMES
 
 
 @dataclass
@@ -136,7 +137,9 @@ class RetargetingConfig:
         import tempfile
 
         # Process the URDF with yourdfpy to better find file path
-        robot_urdf = urdf.URDF.load(self.urdf_path, build_scene_graph=False)
+        robot_urdf = urdf.URDF.load(
+            self.urdf_path, add_dummy_free_joints=self.add_dummy_free_joint, build_scene_graph=False
+        )
         urdf_name = self.urdf_path.split("/")[-1]
         temp_dir = tempfile.mkdtemp(prefix="dex_retargeting-")
         temp_path = f"{temp_dir}/{urdf_name}"
@@ -144,7 +147,12 @@ class RetargetingConfig:
 
         # Load pinocchio model
         robot = RobotWrapper(temp_path)
+
+        # Add 6D dummy joint to target joint names so that it will also be optimized
+        if self.add_dummy_free_joint and self.target_joint_names is not None:
+            self.target_joint_names = DUMMY_JOINT_NAMES + self.target_joint_names
         joint_names = self.target_joint_names if self.target_joint_names is not None else robot.dof_joint_names
+
         if self.type == "position":
             optimizer = PositionOptimizer(
                 robot,
@@ -210,7 +218,7 @@ class RetargetingConfig:
         return retargeting
 
 
-def get_retargeting_config(config_path) -> RetargetingConfig:
+def get_retargeting_config(config_path: Union[str, Path]) -> RetargetingConfig:
     config = RetargetingConfig.load_from_file(config_path)
     return config
 
@@ -228,12 +236,3 @@ def parse_mimic_joint(robot_urdf: urdf.URDF) -> Tuple[bool, List[str], List[str]
             offsets.append(joint.mimic.offset)
 
     return len(mimic_joint_names) > 0, source_joint_names, mimic_joint_names, multipliers, offsets
-
-
-if __name__ == "__main__":
-    # Path below is relative to this file
-
-    test_config = get_retargeting_config(str(Path(__file__).parent / "configs/allegro_hand.yml"))
-    print(test_config)
-    opt = test_config.build()
-    print(opt.optimizer.target_link_human_indices)
