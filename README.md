@@ -11,11 +11,18 @@
   </a>
   <!-- issue badge -->
   <a href="https://github.com/dexsuite/dex-retargeting/issues">
+  <img src="https://img.shields.io/github/issues-closed/dexsuite/dex-retargeting.svg" alt="Issues">
+  </a>
+  <a href="https://github.com/dexsuite/dex-retargeting/issues?q=is%3Aissue+is%3Aclosed">
   <img src="https://img.shields.io/github/issues/dexsuite/dex-retargeting.svg" alt="Issues">
   </a>
   <!-- release badge -->
   <a href="https://github.com/dexsuite/dex-retargeting/tags">
   <img src="https://img.shields.io/github/v/release/dexsuite/dex-retargeting.svg?include_prereleases&sort=semver" alt="Releases">
+  </a>
+  <!-- pypi badge -->
+  <a href="https://github.com/dexsuite/dex-retargeting/tags">
+  <img src="https://img.shields.io/pypi/dm/dex-retargeting" alt="Releases">
   </a>
   <!-- license badge -->
   <a href="https://github.com/dexsuite/dex-retargeting/blob/main/LICENSE">
