@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
+import cv2
+from tqdm import trange
 import sapien
 import transforms3d.quaternions
 
@@ -38,6 +40,7 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
     def __init__(self, robot_names: List[RobotName], hand_type: HandType, headless=False, use_ray_tracing=False):
         super().__init__(headless=headless, use_ray_tracing=use_ray_tracing)
 
+        self.robot_names = robot_names
         self.robots: List[sapien.Articulation] = []
         self.robot_file_names: List[str] = []
         self.retargetings: List[SeqRetargeting] = []
@@ -62,7 +65,6 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
             urdf_path = Path(config.urdf_path)
             if "glb" not in urdf_path.stem:
                 urdf_path = str(urdf_path).replace(".urdf", "_glb.urdf")
-
             robot_urdf = urdf.URDF.load(str(urdf_path), add_dummy_free_joints=True, build_scene_graph=False)
             urdf_name = urdf_path.split("/")[-1]
             temp_dir = tempfile.mkdtemp(prefix="dex_retargeting-")
@@ -90,8 +92,12 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
         # Set table and viewer pose for better visual effect only
         global_y_offset = -y_offset * len(self.robots) / 2
         self.table.set_pose(sapien.Pose([0.5, global_y_offset + 0.2, 0]))
-        if self.viewer is not None:
+        if not self.headless:
             self.viewer.set_camera_xyz(1.5, global_y_offset, 1)
+        else:
+            local_pose = self.camera.get_local_pose()
+            local_pose.set_p(np.array([1.5, global_y_offset, 1]))
+            self.camera.set_local_pose(local_pose)
 
         hand_pose = data["hand_pose"]
         object_pose = data["object_pose"]
@@ -115,8 +121,17 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
                 start_frame = i
                 break
 
+        if self.headless:
+            robot_names = [robot.name for robot in self.robot_names]
+            robot_names = "_".join(robot_names)
+            video_path = Path(__file__).parent.resolve() / f"data/{robot_names}_video.mp4"
+            writer = cv2.VideoWriter(
+                str(video_path), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (self.camera.get_width(), self.camera.get_height())
+            )
+
         # Loop rendering
-        for i in range(start_frame, num_frame):
+        step_per_frame = int(60 / fps)
+        for i in trange(start_frame, num_frame):
             object_pose_frame = object_pose[i]
             hand_pose_frame = hand_pose[i]
             vertex, joint = self._compute_hand_geometry(hand_pose_frame)
@@ -141,8 +156,18 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
                 qpos = retargeting.retarget(ref_value)[retarget2sapien]
                 robot.set_qpos(qpos)
 
-            for k in range(60 // fps):
-                self.viewer.render()
+            self.scene.update_render()
+            if self.headless:
+                self.camera.take_picture()
+                rgb = self.camera.get_picture("Color")[..., :3]
+                rgb = (np.clip(rgb, 0, 1) * 255).astype(np.uint8)
+                writer.write(rgb[..., ::-1])
+            else:
+                for k in range(start_frame):
+                    self.viewer.render()
 
-        self.viewer.paused = True
-        self.viewer.render()
+        if self.headless:
+            writer.release()
+        else:
+            self.viewer.paused = True
+            self.viewer.render()

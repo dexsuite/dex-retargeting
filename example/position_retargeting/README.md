@@ -1,5 +1,7 @@
 ## Retarget Robot Motion from Hand Object Pose Dataset
 
+![teaser](hand_object.webp)
+
 ### Setting up DexYCB Dataset
 
 This example illustrates how you can utilize the impressive DexYCB dataset to create a robot motion trajectory.

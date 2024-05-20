@@ -1,8 +1,10 @@
+from pathlib import Path
 from typing import Dict, List, Optional
 
+import cv2
+from tqdm import trange
 import numpy as np
 import sapien
-import sapien.core as sapien
 import torch
 from pytransform3d import transformations as pt
 from sapien import internal_renderer as R
@@ -47,7 +49,7 @@ class HandDatasetSAPIENViewer:
         else:
             sapien.render.set_viewer_shader_dir("rt")
             sapien.render.set_camera_shader_dir("rt")
-            sapien.render.set_ray_tracing_samples_per_pixel(16)
+            sapien.render.set_ray_tracing_samples_per_pixel(64)
             sapien.render.set_ray_tracing_path_depth(8)
             sapien.render.set_ray_tracing_denoiser("oidn")
 
@@ -57,17 +59,9 @@ class HandDatasetSAPIENViewer:
 
         # Lighting
         scene.set_environment_map(create_dome_envmap(sky_color=[0.2, 0.2, 0.2], ground_color=[0.2, 0.2, 0.2]))
-        scene.add_directional_light(np.array([1, -1, -1]), np.array([1, 1, 1]), shadow=True)
-        scene.add_directional_light([0, 0, -1], [0.9, 0.8, 0.8], shadow=False)
+        scene.add_directional_light(np.array([1, -1, -1]), np.array([2, 2, 2]), shadow=True)
+        scene.add_directional_light([0, 0, -1], [1.8, 1.6, 1.6], shadow=False)
         scene.set_ambient_light(np.array([0.2, 0.2, 0.2]))
-        scene.add_spot_light(
-            np.array([0, 0, 1.5]),
-            direction=np.array([0, 0, -1]),
-            inner_fov=0.3,
-            outer_fov=1.0,
-            color=np.array([0.5, 0.5, 0.5]),
-            shadow=False,
-        )
 
         # Add ground
         visual_material = sapien.render.RenderMaterial()
@@ -82,10 +76,14 @@ class HandDatasetSAPIENViewer:
             viewer = Viewer()
             viewer.set_scene(scene)
             viewer.set_camera_xyz(1.5, 0, 1)
-            viewer.set_camera_rpy(0, -0.6, 3.14)
+            viewer.set_camera_rpy(0, -0.8, 3.14)
             viewer.control_window.toggle_origin_frame(False)
             self.viewer = viewer
-        self.gui = not headless
+        else:
+            self.camera = scene.add_camera("cam", 1920, 640, 0.9, 0.01, 100)
+            self.camera.set_local_pose(sapien.Pose([1.5, 0, 1], [0, 0.389418, 0, -0.921061]))
+
+        self.headless = headless
 
         # Create table
         white_diffuse = sapien.render.RenderMaterial()
@@ -187,14 +185,18 @@ class HandDatasetSAPIENViewer:
         self.nodes.append(node)
 
     def render_dexycb_data(self, data: Dict, fps=10):
-        if not self.gui:
-            raise RuntimeError(f"Could not render data frames when the gui is disabled.")
         hand_pose = data["hand_pose"]
         object_pose = data["object_pose"]
         frame_num = hand_pose.shape[0]
 
+        if self.headless:
+            video_path = Path(__file__).parent.resolve() / "data/human_hand_video.mp4"
+            writer = cv2.VideoWriter(
+                str(video_path), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (self.camera.get_width(), self.camera.get_height())
+            )
+
         step_per_frame = int(60 / fps)
-        for i in range(frame_num):
+        for i in trange(frame_num):
             object_pose_frame = object_pose[i]
             hand_pose_frame = hand_pose[i]
             vertex, _ = self._compute_hand_geometry(hand_pose_frame)
@@ -205,8 +207,17 @@ class HandDatasetSAPIENViewer:
                 pose = self.camera_pose * sapien.Pose(pos_quat[4:], np.concatenate([pos_quat[3:4], pos_quat[:3]]))
                 self.objects[k].set_pose(pose)
             self.scene.update_render()
-            for _ in range(step_per_frame):
-                self.viewer.render()
+            if self.headless:
+                self.camera.take_picture()
+                rgb = self.camera.get_picture("Color")[..., :3]
+                rgb = (np.clip(rgb, 0, 1) * 255).astype(np.uint8)
+                writer.write(rgb[..., ::-1])
+            else:
+                for _ in range(step_per_frame):
+                    self.viewer.render()
 
-        self.viewer.paused = True
-        self.viewer.render()
+        if not self.headless:
+            self.viewer.paused = True
+            self.viewer.render()
+        else:
+            writer.release()

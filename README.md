@@ -45,12 +45,14 @@ pip install -e ".[example]"
 
 ### Retargeting from human hand video
 
-This type of retargeting can be used for applications like teleoperation, 
+This type of retargeting can be used for applications like teleoperation,
 e.g. [AnyTeleop](https://yzqin.github.io/anyteleop/).
 
 [Tutorial on retargeting from human hand video](example/vector_retargeting/README.md)
 
 ### Retarget from hand object pose dataset
+
+![teaser](example/position_retargeting/hand_object.webp)
 
 This type of retargeting can be used post-process human data for robot imitation,
 e.g. [DexMV](https://yzqin.github.io/dexmv/).
@@ -73,10 +75,10 @@ enhancements. If you utilize this work, please cite it as follows:
 
 ## Acknowledgments
 
-This repository builds on the foundational work from [pinocchio](https://github.com/stack-of-tasks/pinocchio). Examples
-within utilize a renderer derived from [SAPIEN](https://github.com/haosulab/SAPIEN).
-The [PositionOptimizer](https://github.com/dexsuite/dex-retargeting/blob/main/dex_retargeting/optimizer.py) leverages
-methodologies from our earlier
-project, [From One Hand to Multiple Hands](https://yzqin.github.io/dex-teleop-imitation/). Additionally,
-the [DexPilotOptimizer](https://github.com/dexsuite/dex-retargeting/blob/main/dex_retargeting/optimizer.py) is crafted
-using insights from [DexPilot](https://sites.google.com/view/dex-pilot).
+The robot hand models in this repository are sourced directly from [dex-urdf](https://github.com/dexsuite/dex-urdf).
+The robot kinematics in this repo are based on [pinocchio](https://github.com/stack-of-tasks/pinocchio).
+Examples use [SAPIEN](https://github.com/haosulab/SAPIEN) for rendering and visualization.
+
+The `PositionOptimizer` leverages methodologies from our earlier
+project, [From One Hand to Multiple Hands](https://yzqin.github.io/dex-teleop-imitation/).
+Additionally, the `DexPilotOptimizer`is crafted using insights from [DexPilot](https://sites.google.com/view/dex-pilot).
