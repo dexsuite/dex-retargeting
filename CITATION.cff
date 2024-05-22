@@ -1,5 +1,4 @@
 cff-version: 1.2.0
-message: "Thanks for using dex-retargeting. If you use this software, please cite it as below."
 authors:
   - family-names: "Qin"
     given-names: "Yuzhe"
@@ -17,27 +16,7 @@ authors:
     given-names: "Yu-Wei"
   - family-names: "Fox"
     given-names: "Dieter"
-title: "AnyTeleop"
-version: 0.3.1
 date-released: 2023-10-25
+title: "AnyTeleop"
+message: "Thanks for using dex-retargeting. If you use this software, please cite it as below."
 url: "https://github.com/dexsuite/dex-retargeting"
-preferred-citation:
-  - family-names: "Qin"
-    given-names: "Yuzhe"
-  - family-names: "Yang"
-    given-names: "Wei"
-  - family-names: "Huang"
-    given-names: "Binghao"
-  - family-names: "Van Wyk"
-    given-names: "Karl"
-  - family-names: "Su"
-    given-names: "Hao"
-  - family-names: "Wang"
-    given-names: "Xiaolong"
-  - family-names: "Chao"
-    given-names: "Yu-Wei"
-  type: conference-paper
-  title: "AnyTeleop: A General Vision-Based Dexterous Robot Arm-Hand Teleoperation System"
-  authors:
-  year: 2023
-  collection-title:: "Robotics: Science and Systems XIX, Daegu, Republic of Korea, July 10-14, 2023"
