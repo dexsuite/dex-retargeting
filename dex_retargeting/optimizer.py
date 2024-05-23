@@ -307,6 +307,7 @@ class DexPilotOptimizer(Optimizer):
         target_joint_names: List[str],
         finger_tip_link_names: List[str],
         wrist_link_name: str,
+        target_link_human_indices: Optional[np.ndarray] = None,
         huber_delta=0.03,
         norm_delta=4e-3,
         # DexPilot parameters
@@ -329,7 +330,8 @@ class DexPilotOptimizer(Optimizer):
             task_link_index = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 1, 2, 3, 4, 5]
             self.num_fingers = 5
 
-        target_link_human_indices = (np.stack([origin_link_index, task_link_index], axis=0) * 4).astype(int)
+        if target_link_human_indices is None:
+            target_link_human_indices = (np.stack([origin_link_index, task_link_index], axis=0) * 4).astype(int)
         link_names = [wrist_link_name] + finger_tip_link_names
         target_origin_link_names = [link_names[index] for index in origin_link_index]
         target_task_link_names = [link_names[index] for index in task_link_index]

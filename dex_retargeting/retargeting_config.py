@@ -90,6 +90,13 @@ class RetargetingConfig:
         elif self.type == "dexpilot":
             if self.finger_tip_link_names is None or self.wrist_link_name is None:
                 raise ValueError(f"Position retargeting requires: finger_tip_link_names + wrist_link_name")
+            if self.target_link_human_indices is not None:
+                print(
+                    "\033[33m",
+                    "Target link human indices is provided in the DexPilot retargeting config, which is uncommon.\n"
+                    "If you do not know exactly how it is used, please leave it to None for default.\n"
+                    "\033[00m",
+                )
 
         # URDF path check
         urdf_path = Path(self.urdf_path)
@@ -181,6 +188,7 @@ class RetargetingConfig:
                 joint_names,
                 finger_tip_link_names=self.finger_tip_link_names,
                 wrist_link_name=self.wrist_link_name,
+                target_link_human_indices=self.target_link_human_indices,
                 scaling=self.scaling_factor,
             )
         else:

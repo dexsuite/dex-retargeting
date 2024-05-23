@@ -22,7 +22,7 @@ def render_by_sapien(
     headless: Optional[bool] = False,
 ):
     # Generate rendering config
-    use_rt = True
+    use_rt = headless
     if not use_rt:
         sapien.render.set_viewer_shader_dir("default")
         sapien.render.set_camera_shader_dir("default")
