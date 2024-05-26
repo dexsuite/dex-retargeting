@@ -11,7 +11,7 @@
   </a>
   <!-- issue badge -->
   <a href="https://github.com/dexsuite/dex-retargeting/issues">
-  <img src="https://img.shields.io/github/issues-closed/dexsuite/dex-retargeting.svg" alt="Issues">
+  <img src="https://img.shields.io/github/issues-closed/dexsuite/dex-retargeting.svg" alt="Issues Closed">
   </a>
   <a href="https://github.com/dexsuite/dex-retargeting/issues?q=is%3Aissue+is%3Aclosed">
   <img src="https://img.shields.io/github/issues/dexsuite/dex-retargeting.svg" alt="Issues">
@@ -22,7 +22,7 @@
   </a>
   <!-- pypi badge -->
   <a href="https://github.com/dexsuite/dex-retargeting/tags">
-  <img src="https://img.shields.io/pypi/dm/dex-retargeting" alt="Releases">
+  <img src="https://static.pepy.tech/badge/dex_retargeting/month" alt="pypi">
   </a>
   <!-- license badge -->
   <a href="https://github.com/dexsuite/dex-retargeting/blob/main/LICENSE">
