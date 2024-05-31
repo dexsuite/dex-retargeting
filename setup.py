@@ -25,7 +25,6 @@ core_requirements = [
     "anytree",
     "pyyaml",
     "lxml",
-    "loguru",
 ]
 
 # Check whether you have torch installed
@@ -61,7 +60,7 @@ dev_requirements = [
     "mypy",
 ]
 
-example_requirements = ["tyro", "tqdm", "opencv-python", "mediapipe", "sapien==3.0.0b0"]
+example_requirements = ["tyro", "tqdm", "opencv-python", "mediapipe", "sapien==3.0.0b0", "loguru"]
 
 classifiers = [
     "Development Status :: 3 - Alpha",

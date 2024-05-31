@@ -1,48 +1,37 @@
-from pathlib import Path
 import multiprocessing
 import time
+from pathlib import Path
+from queue import Empty
+from typing import Optional
+
 import cv2
-from loguru import logger
 import numpy as np
 import sapien
+import tyro
+from loguru import logger
 from sapien.asset import create_dome_envmap
 from sapien.utils import Viewer
 
 from dex_retargeting.constants import RobotName, RetargetingType, HandType, get_default_config_path
 from dex_retargeting.retargeting_config import RetargetingConfig
-from dex_retargeting.seq_retarget import SeqRetargeting
 from single_hand_detector import SingleHandDetector
 
 
-def start_retargeting(queue: multiprocessing.Queue, robot_dir:str, config_path: str, robot_name:str):
+def start_retargeting(queue: multiprocessing.Queue, robot_dir: str, config_path: str):
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
     logger.info(f"Start retargeting with config {config_path}")
     retargeting = RetargetingConfig.load_from_file(config_path).build()
-    detector = SingleHandDetector(hand_type="Right", selfie=False)
 
-    # init show ui
-    meta_data = {
-        "dof": len(retargeting.optimizer.robot.dof_joint_names),
-        "joint_names":retargeting.optimizer.robot.dof_joint_names,
-    }
-    
-    headless = False
-    if not headless:
-        sapien.render.set_viewer_shader_dir("default")
-        sapien.render.set_camera_shader_dir("default")
-    else:
-        sapien.render.set_viewer_shader_dir("rt")
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(16)
-        sapien.render.set_ray_tracing_path_depth(8)
-        sapien.render.set_ray_tracing_denoiser("oidn")
-    
+    hand_type = "Right" if "right" in config_path.lower() else "Left"
+    detector = SingleHandDetector(hand_type=hand_type, selfie=False)
+
+    sapien.render.set_viewer_shader_dir("default")
+    sapien.render.set_camera_shader_dir("default")
+
     config = RetargetingConfig.load_from_file(config_path)
 
     # Setup
     scene = sapien.Scene()
-
-    # Ground
     render_mat = sapien.render.RenderMaterial()
     render_mat.base_color = [0.06, 0.08, 0.12, 1]
     render_mat.metallic = 0.0
@@ -61,15 +50,14 @@ def start_retargeting(queue: multiprocessing.Queue, robot_dir:str, config_path: 
     cam = scene.add_camera(name="Cheese!", width=600, height=600, fovy=1, near=0.1, far=10)
     cam.set_local_pose(sapien.Pose([0.50, 0, 0.0], [0, 0, 0, -1]))
 
-    
     viewer = Viewer()
     viewer.set_scene(scene)
     viewer.control_window.show_origin_frame = False
     viewer.control_window.move_speed = 0.01
     viewer.control_window.toggle_camera_lines(False)
     viewer.set_camera_pose(cam.get_local_pose())
-    
-     # Load robot and set it to a good pose to take picture
+
+    # Load robot and set it to a good pose to take picture
     loader = scene.create_urdf_loader()
     filepath = Path(config.urdf_path)
     robot_name = filepath.stem
@@ -89,14 +77,13 @@ def start_retargeting(queue: multiprocessing.Queue, robot_dir:str, config_path: 
     elif "svh" in robot_name:
         loader.scale = 1.5
 
-   
     if "glb" not in robot_name:
         filepath = str(filepath).replace(".urdf", "_glb.urdf")
     else:
         filepath = str(filepath)
-        
+
     robot = loader.load(filepath)
-    
+
     if "ability" in robot_name:
         robot.set_pose(sapien.Pose([0, 0, -0.15]))
     elif "shadow" in robot_name:
@@ -111,45 +98,45 @@ def start_retargeting(queue: multiprocessing.Queue, robot_dir:str, config_path: 
         robot.set_pose(sapien.Pose([0, 0, -0.15]))
     elif "svh" in robot_name:
         robot.set_pose(sapien.Pose([0, 0, -0.13]))
-    
+
     # Different robot loader may have different orders for joints
     sapien_joint_names = [joint.get_name() for joint in robot.get_active_joints()]
-    retargeting_joint_names = meta_data["joint_names"]
+    retargeting_joint_names = retargeting.joint_names
     retargeting_to_sapien = np.array([retargeting_joint_names.index(name) for name in sapien_joint_names]).astype(int)
-    
-    for _ in range(2):
-       viewer.render()
 
     while True:
-        rgb = queue.get()
-        if rgb is None:
-            time.sleep(.1)
-            continue
+        try:
+            rgb = queue.get(timeout=5)
+        except Empty:
+            logger.error(f"Fail to fetch image from camera in 5 secs. Please check your web camera device.")
+            return
 
         _, joint_pos, _, _ = detector.detect(rgb)
-        logger.info("join pos {}", joint_pos)
         if joint_pos is None:
-            continue
-
-        retargeting_type = retargeting.optimizer.retargeting_type
-        indices = retargeting.optimizer.target_link_human_indices
-        if retargeting_type == "POSITION":
-            indices = indices
-            ref_value = joint_pos[indices, :]
+            logger.warning(f"{hand_type} hand is not detected.")
         else:
-            origin_indices = indices[0, :]
-            task_indices = indices[1, :]
-            ref_value = joint_pos[task_indices, :] - joint_pos[origin_indices, :]
-        qpos = retargeting.retarget(ref_value)
-        logger.info(f"qpos {qpos}")
-        robot.set_qpos((qpos)[retargeting_to_sapien])
-       
+            retargeting_type = retargeting.optimizer.retargeting_type
+            indices = retargeting.optimizer.target_link_human_indices
+            if retargeting_type == "POSITION":
+                indices = indices
+                ref_value = joint_pos[indices, :]
+            else:
+                origin_indices = indices[0, :]
+                task_indices = indices[1, :]
+                ref_value = joint_pos[task_indices, :] - joint_pos[origin_indices, :]
+            qpos = retargeting.retarget(ref_value)
+            robot.set_qpos(qpos[retargeting_to_sapien])
+
         for _ in range(2):
             viewer.render()
-       
 
-def produce_frame(queue: multiprocessing.Queue):
-    cap = cv2.VideoCapture(0)
+
+def produce_frame(queue: multiprocessing.Queue, camera_path: Optional[str] = None):
+    if camera_path is None:
+        cap = cv2.VideoCapture(4)
+    else:
+        cap = cv2.VideoCapture(camera_path)
+
     while cap.isOpened():
         success, image = cap.read()
         if not success:
@@ -157,24 +144,33 @@ def produce_frame(queue: multiprocessing.Queue):
         frame = image
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         queue.put(image)
-        time.sleep(.2)
-        cv2.imshow('demo', frame)
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        time.sleep(1 / 30.0)
+        cv2.imshow("demo", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
 
-def main():
-    robot_name: RobotName = RobotName.allegro
-    retargeting_type: RetargetingType = RetargetingType.vector
-    hand_type: HandType = HandType.right
+def main(
+    robot_name: RobotName, retargeting_type: RetargetingType, hand_type: HandType, camera_path: Optional[str] = None
+):
+    """
+    Detects the human hand pose from a video and translates the human pose trajectory into a robot pose trajectory.
 
+    Args:
+        robot_name: The identifier for the robot. This should match one of the default supported robots.
+        retargeting_type: The type of retargeting, each type corresponds to a different retargeting algorithm.
+        hand_type: Specifies which hand is being tracked, either left or right.
+            Please note that retargeting is specific to the same type of hand: a left robot hand can only be retargeted
+            to another left robot hand, and the same applies for the right hand.
+        camera_path: the device path to feed to opencv to open the web camera. It will use 0 by default.
+    """
     config_path = get_default_config_path(robot_name, retargeting_type, hand_type)
     robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
 
     queue = multiprocessing.Queue(maxsize=1000)
-    producer_process = multiprocessing.Process(target=produce_frame, args=(queue,))
-    consumer_process = multiprocessing.Process(target=start_retargeting, args=(queue, str(robot_dir), str(config_path), robot_name))
+    producer_process = multiprocessing.Process(target=produce_frame, args=(queue, camera_path))
+    consumer_process = multiprocessing.Process(target=start_retargeting, args=(queue, str(robot_dir), str(config_path)))
 
     producer_process.start()
     consumer_process.start()
@@ -186,5 +182,5 @@ def main():
     print("done")
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    tyro.cli(main)

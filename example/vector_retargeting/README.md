@@ -36,12 +36,34 @@ python3 render_robot_hand.py \
 
 This command uses the data saved from the previous step to create a rendered video.
 
-### Record a video of your own hand
+### Capture a Video Using Your Webcam
+
+*The following instructions assume that your computer has a webcam connected.*
 
 ```bash
 python3 capture_webcam.py --video-path example/vector_retargeting/data/my_human_hand_video.mp4
-
 ```
 
-This command will access your webcam (which should be connected to your computer) and record the video stream in mp4
-format. To end video recording, press `q` on the keyboard.
+This command enables you to use your webcam to record a video saved in MP4 format. To stop recording, press `q` on your
+keyboard.
+
+### Real-time Visualization of Hand Retargeting via Webcam
+
+```bash
+pip install loguru
+python3 show_realtime_retargeting.py \
+  --robot-name allegro \
+  --retargeting-type dexpilot \
+  --hand-type right 
+```
+
+This process integrates the tasks described above. It involves capturing your hand movements through the webcam and
+instantaneously displaying the retargeting outcomes in the SAPIEN viewer. Special thanks
+to [@xbkaishui](https://github.com/xbkaishui) for contributing the initial pull request.
+
+![realtime_example](data/realtime_example.mp4)
+
+
+
+
+
