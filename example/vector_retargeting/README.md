@@ -61,7 +61,7 @@ This process integrates the tasks described above. It involves capturing your ha
 instantaneously displaying the retargeting outcomes in the SAPIEN viewer. Special thanks
 to [@xbkaishui](https://github.com/xbkaishui) for contributing the initial pull request.
 
-![realtime_example](data/realtime_example.mp4)
+![realtime_example](data/realtime_example.webp)
 
 
 
