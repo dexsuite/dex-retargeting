@@ -25,6 +25,7 @@ core_requirements = [
     "anytree",
     "pyyaml",
     "lxml",
+    "loguru",
 ]
 
 # Check whether you have torch installed
