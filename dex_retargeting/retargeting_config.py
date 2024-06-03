@@ -5,6 +5,7 @@ from typing import Union
 
 import numpy as np
 import yaml
+import os
 
 from dex_retargeting import yourdfpy as urdf
 from dex_retargeting.kinematics_adaptor import MimicJointKinematicAdaptor
@@ -147,7 +148,7 @@ class RetargetingConfig:
         robot_urdf = urdf.URDF.load(
             self.urdf_path, add_dummy_free_joints=self.add_dummy_free_joint, build_scene_graph=False
         )
-        urdf_name = self.urdf_path.split("/")[-1]
+        urdf_name = self.urdf_path.split(os.path.sep)[-1]
         temp_dir = tempfile.mkdtemp(prefix="dex_retargeting-")
         temp_path = f"{temp_dir}/{urdf_name}"
         robot_urdf.write_xml_file(temp_path)
