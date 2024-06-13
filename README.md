@@ -66,6 +66,32 @@ e.g. [DexMV](https://yzqin.github.io/dexmv/).
 
 [Tutorial on retargeting from hand-object pose dataset](example/position_retargeting/README.md)
 
+## FAQ and Troubleshooting
+
+### Joint Orders for Retargeting
+
+URDF parsers, such as ROS, physical simulators, real robot driver, and this repository, may parse URDF files with
+different joint orders. To use `dex-retargeting` results with other libraries, handle joint ordering explicitly **using
+joint names**, which are unique within a URDF file.
+
+Example: Using `dex-retargeting` with the SAPIEN simulator
+
+```python
+from dex_retargeting.seq_retarget import SeqRetargeting
+
+retargeting: SeqRetargeting
+sapien_joint_names = [joint.get_name() for joint in robot.get_active_joints()]
+retargeting_joint_names = retargeting.joint_names
+retargeting_to_sapien = np.array([retargeting_joint_names.index(name) for name in sapien_joint_names]).astype(int)
+
+# Use the index map to handle joint order differences
+sapien_robot.set_qpos(retarget_qpos[retargeting_to_sapien])
+```
+
+This example retrieves joint names from the SAPIEN robot and `SeqRetargeting` object, creates a mapping
+array (`retargeting_to_sapien`) to map joint indices, and sets the SAPIEN robot's joint positions using the retargeted
+joint positions.
+
 ## Citation
 
 This repository is derived from the [AnyTeleop Project](https://yzqin.github.io/anyteleop/) and is subject to ongoing
