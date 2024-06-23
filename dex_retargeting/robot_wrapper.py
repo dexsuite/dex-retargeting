@@ -58,6 +58,8 @@ class RobotWrapper:
         return self.dof_joint_names.index(name)
 
     def get_link_index(self, name: str):
+        if name not in self.link_names:
+            raise ValueError(f"{name} is not a link name. Valid link names: \n{self.link_names}")
         return self.model.getFrameId(name)
 
     # -------------------------------------------------------------------------- #

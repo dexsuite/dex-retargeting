@@ -55,6 +55,7 @@ def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: st
                     pickle.dump(dict(data=data, meta_data=meta_data), f)
                 pbar.update(1)
 
+        retargeting.verbose()
         cap.release()
         cv2.destroyAllWindows()
 
