@@ -130,7 +130,7 @@ class SeqRetargeting:
         print(f"Last distance: {min_value}")
 
     def reset(self):
-        self.last_qpos = self.joint_limits.mean(1)[self.optimizer.idx_pin2target]
+        self.last_qpos = self.joint_limits.mean(1).astype(np.float32)
         self.num_retargeting = 0
         self.accumulated_time = 0
 

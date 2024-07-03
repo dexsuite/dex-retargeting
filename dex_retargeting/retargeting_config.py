@@ -45,9 +45,13 @@ class RetargetingConfig:
     # For example, Allegro is 1.6 times larger than normal human hand, then this scaling factor should be 1.6
     scaling_factor: float = 1.0
 
-    # Optimization hyperparameter
+    # Optimization parameters
     normal_delta: float = 4e-3
     huber_delta: float = 2e-2
+
+    # DexPilot optimizer parameters
+    project_dist: float = 0.03
+    escape_dist: float = 0.05
 
     # Joint limit tag
     has_joint_limits: bool = True
@@ -191,6 +195,8 @@ class RetargetingConfig:
                 wrist_link_name=self.wrist_link_name,
                 target_link_human_indices=self.target_link_human_indices,
                 scaling=self.scaling_factor,
+                project_dist=self.project_dist,
+                escape_dist=self.escape_dist,
             )
         else:
             raise RuntimeError()
