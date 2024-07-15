@@ -42,18 +42,18 @@ def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: st
                     ref_value = joint_pos[task_indices, :] - joint_pos[origin_indices, :]
                 qpos = retargeting.retarget(ref_value)
                 data.append(qpos)
-
-                meta_data = dict(
-                    config_path=config_path,
-                    dof=len(retargeting.optimizer.robot.dof_joint_names),
-                    joint_names=retargeting.optimizer.robot.dof_joint_names,
-                )
-
-                output_path = Path(output_path)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                with output_path.open("wb") as f:
-                    pickle.dump(dict(data=data, meta_data=meta_data), f)
                 pbar.update(1)
+
+        meta_data = dict(
+            config_path=config_path,
+            dof=len(retargeting.optimizer.robot.dof_joint_names),
+            joint_names=retargeting.optimizer.robot.dof_joint_names,
+        )
+
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("wb") as f:
+            pickle.dump(dict(data=data, meta_data=meta_data), f)
 
         retargeting.verbose()
         cap.release()
