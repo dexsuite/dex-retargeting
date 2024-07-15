@@ -111,6 +111,8 @@ def render_by_sapien(
         robot.set_pose(sapien.Pose([0, 0, -0.15]))
     elif "svh" in robot_name:
         robot.set_pose(sapien.Pose([0, 0, -0.13]))
+    elif "inspire" in robot_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.15]))
 
     # Video recorder
     if record_video:

@@ -1,10 +1,8 @@
 retargeting:
   type: vector
   urdf_path: shadow_hand/shadow_hand_left.urdf
-  wrist_link_name: "ee_link"
 
   # Target refers to the retargeting target, which is the robot hand
-  target_joint_names: null
   target_origin_link_names: [ "palm", "palm", "palm", "palm", "palm", "palm", "palm", "palm", "palm", "palm" ]
   target_task_link_names: [ "thtip", "fftip", "mftip", "rftip", "lftip",  "thmiddle", "ffmiddle", "mfmiddle", "rfmiddle", "lfmiddle" ]
   scaling_factor: 1.2

@@ -1,10 +1,8 @@
 retargeting:
   type: vector
   urdf_path: allegro_hand/allegro_hand_right.urdf
-  wrist_link_name: "wrist"
 
   # Target refers to the retargeting target, which is the robot hand
-  target_joint_names: null
   target_origin_link_names: [ "wrist", "wrist", "wrist", "wrist" ]
   target_task_link_names: [ "link_15.0_tip", "link_3.0_tip", "link_7.0_tip", "link_11.0_tip" ]
   scaling_factor: 1.6

@@ -20,15 +20,15 @@ class RetargetingConfig:
     type: str
     urdf_path: str
 
-    # The link on the robot hand which corresponding to the wrist of human hand
-    wrist_link_name: str
-
     # Whether to add free joint to the root of the robot. Free joint enable the robot hand move freely in the space
     add_dummy_free_joint: bool = False
 
     # Source refers to the retargeting input, which usually corresponds to the human hand
     # The joint indices of human hand joint which corresponds to each link in the target_link_names
     target_link_human_indices: Optional[np.ndarray] = None
+
+    # The link on the robot hand which corresponding to the wrist of human hand
+    wrist_link_name: Optional[str] = None
 
     # Position retargeting link names
     target_link_names: Optional[List[str]] = None
@@ -168,7 +168,6 @@ class RetargetingConfig:
         if self.type == "position":
             optimizer = PositionOptimizer(
                 robot,
-                self.wrist_link_name,
                 joint_names,
                 target_link_names=self.target_link_names,
                 target_link_human_indices=self.target_link_human_indices,
@@ -178,7 +177,6 @@ class RetargetingConfig:
         elif self.type == "vector":
             optimizer = VectorOptimizer(
                 robot,
-                self.wrist_link_name,
                 joint_names,
                 target_origin_link_names=self.target_origin_link_names,
                 target_task_link_names=self.target_task_link_names,

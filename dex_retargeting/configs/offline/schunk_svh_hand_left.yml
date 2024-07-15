@@ -1,7 +1,6 @@
 retargeting:
   type: position
   urdf_path: schunk_hand/schunk_svh_hand_left.urdf
-  wrist_link_name: "left_hand_base_link"
 
   target_joint_names: [ 'left_hand_Thumb_Opposition', 'left_hand_Thumb_Flexion', 'left_hand_Index_Finger_Proximal',
                         'left_hand_Index_Finger_Distal', 'left_hand_Finger_Spread', 'left_hand_Pinky',
@@ -10,6 +9,7 @@ retargeting:
                         "left_hand_q", "left_hand_b", "left_hand_p", "left_hand_o", "left_hand_n", "left_hand_i"]
 
   target_link_human_indices: [ 4, 8, 12, 16, 20, 2, 6, 10, 14, 18 ]
+  add_dummy_free_joint: True
 
   # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
   # 1 means no filter while 0 means not moving

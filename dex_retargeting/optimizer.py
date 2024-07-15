@@ -15,13 +15,11 @@ class Optimizer:
     def __init__(
         self,
         robot: RobotWrapper,
-        wrist_link_name: str,
         target_joint_names: List[str],
         target_link_human_indices: np.ndarray,
     ):
         self.robot = robot
         self.num_joints = robot.dof
-        self.wrist_link_name = wrist_link_name
 
         joint_names = robot.dof_joint_names
         idx_pin2target = []
@@ -101,19 +99,18 @@ class Optimizer:
 
 
 class PositionOptimizer(Optimizer):
-    retargeting_type = "position"
+    retargeting_type = "POSITION"
 
     def __init__(
         self,
         robot: RobotWrapper,
-        wrist_link_name: str,
         target_joint_names: List[str],
         target_link_names: List[str],
         target_link_human_indices: np.ndarray,
         huber_delta=0.02,
         norm_delta=4e-3,
     ):
-        super().__init__(robot, wrist_link_name, target_joint_names, target_link_human_indices)
+        super().__init__(robot, target_joint_names, target_link_human_indices)
         self.body_names = target_link_names
         self.huber_loss = torch.nn.SmoothL1Loss(beta=huber_delta)
         self.norm_delta = norm_delta
@@ -186,7 +183,6 @@ class VectorOptimizer(Optimizer):
     def __init__(
         self,
         robot: RobotWrapper,
-        wrist_link_name: str,
         target_joint_names: List[str],
         target_origin_link_names: List[str],
         target_task_link_names: List[str],
@@ -195,7 +191,7 @@ class VectorOptimizer(Optimizer):
         norm_delta=4e-3,
         scaling=1.0,
     ):
-        super().__init__(robot, wrist_link_name, target_joint_names, target_link_human_indices)
+        super().__init__(robot, target_joint_names, target_link_human_indices)
         self.origin_link_names = target_origin_link_names
         self.task_link_names = target_task_link_names
         self.huber_loss = torch.nn.SmoothL1Loss(beta=huber_delta, reduction="mean")
@@ -336,7 +332,7 @@ class DexPilotOptimizer(Optimizer):
         target_origin_link_names = [link_names[index] for index in origin_link_index]
         target_task_link_names = [link_names[index] for index in task_link_index]
 
-        super().__init__(robot, wrist_link_name, target_joint_names, target_link_human_indices)
+        super().__init__(robot, target_joint_names, target_link_human_indices)
         self.origin_link_names = target_origin_link_names
         self.task_link_names = target_task_link_names
         self.scaling = scaling

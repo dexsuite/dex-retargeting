@@ -75,6 +75,7 @@ class TestOptimizer:
         config = RetargetingConfig.load_from_file(config_path, override)
 
         retargeting = config.build()
+        assert isinstance(retargeting.optimizer, PositionOptimizer)
 
         robot: RobotWrapper = retargeting.optimizer.robot
         optimizer = retargeting.optimizer
@@ -120,6 +121,7 @@ class TestOptimizer:
         config = RetargetingConfig.load_from_file(config_path, override)
 
         retargeting = config.build()
+        assert retargeting.optimizer.retargeting_type == "VECTOR"
 
         robot: RobotWrapper = retargeting.optimizer.robot
         optimizer = retargeting.optimizer
@@ -168,6 +170,7 @@ class TestOptimizer:
         config = RetargetingConfig.load_from_file(config_path, override)
 
         retargeting = config.build()
+        assert retargeting.optimizer.retargeting_type == "DEXPILOT"
 
         robot: RobotWrapper = retargeting.optimizer.robot
         optimizer = retargeting.optimizer

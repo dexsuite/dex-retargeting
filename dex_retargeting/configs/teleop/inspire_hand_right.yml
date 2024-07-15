@@ -1,7 +1,6 @@
 retargeting:
   type: vector
   urdf_path: inspire_hand/inspire_hand_right.urdf
-  wrist_link_name: "base"
 
   # Target refers to the retargeting target, which is the robot hand
   target_joint_names: [ 'pinky_proximal_joint', 'ring_proximal_joint', 'middle_proximal_joint', 'index_proximal_joint',

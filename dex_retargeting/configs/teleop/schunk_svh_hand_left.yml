@@ -1,7 +1,6 @@
 retargeting:
   type: vector
   urdf_path: schunk_hand/schunk_svh_hand_left.urdf
-  wrist_link_name: "left_hand_base_link"
 
   # Target refers to the retargeting target, which is the robot hand
   target_joint_names: [ 'left_hand_Thumb_Opposition', 'left_hand_Thumb_Flexion', 'left_hand_Index_Finger_Proximal',
