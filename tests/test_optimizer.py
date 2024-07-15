@@ -63,7 +63,7 @@ class TestOptimizer:
         return random_pin_qpos, init_qpos, random_target_pos
 
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
-    @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
+    @pytest.mark.parametrize("hand_type", [name for name in HandType])
     def test_position_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.position, hand_type)
 
@@ -105,7 +105,7 @@ class TestOptimizer:
         assert np.mean(errors["pos"]) < 1e-2
 
     @pytest.mark.parametrize("robot_name", ROBOT_NAMES)
-    @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
+    @pytest.mark.parametrize("hand_type", [name for name in HandType])
     def test_vector_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.vector, hand_type)
 
@@ -153,7 +153,7 @@ class TestOptimizer:
         assert np.mean(errors["pos"]) < 1e-2
 
     @pytest.mark.parametrize("robot_name", DEXPILOT_ROBOT_NAMES)
-    @pytest.mark.parametrize("hand_type", [name for name in HandType][:1])
+    @pytest.mark.parametrize("hand_type", [name for name in HandType])
     def test_dexpilot_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.dexpilot, hand_type)
 
