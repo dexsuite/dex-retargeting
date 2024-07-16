@@ -30,6 +30,7 @@ def main(video_path: str, video_capture_device: Union[str, int] = 0):
         if cv2.waitKey(1) & 0xFF == 27:
             break
 
+    print('Recording finished')
     cap.release()
     writer.release()
     cv2.destroyAllWindows()
