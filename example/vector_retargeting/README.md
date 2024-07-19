@@ -41,10 +41,10 @@ This command uses the data saved from the previous step to create a rendered vid
 *The following instructions assume that your computer has a webcam connected.*
 
 ```bash
-python3 capture_webcam.py --video-path example/vector_retargeting/data/my_human_hand_video.mp4
+python3 capture_webcam.py --video-path data/my_human_hand_video.mp4
 ```
 
-This command enables you to use your webcam to record a video saved in MP4 format. To stop recording, press `q` on your
+This command enables you to use your webcam to record a video saved in MP4 format. To stop recording, press `Esc` on your
 keyboard.
 
 ### Real-time Visualization of Hand Retargeting via Webcam

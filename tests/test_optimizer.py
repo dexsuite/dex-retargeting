@@ -67,6 +67,10 @@ class TestOptimizer:
     def test_position_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.position, hand_type)
 
+        if not config_path.exists():
+            print(f"Skip the test for {robot_name.name} as the config file does not exist.")
+            return
+
         # Note: The parameters below are adjusted solely for this test
         # The smoothness penalty is deactivated here, meaning no low pass filter and no continuous joint value
         # This is because the test is focused solely on the efficiency of single step optimization
@@ -97,7 +101,7 @@ class TestOptimizer:
             computed_target_pos = np.array([robot.get_link_pose(i)[:3, 3] for i in optimizer.target_link_indices])
 
             # Position difference
-            error = np.mean(np.linalg.norm(computed_target_pos - random_target_pos, axis=1))
+            error = np.mean(np.linalg.norm(computed_target_pos - random_target_pos, axis=-1))
             errors["pos"].append(error)
 
         tac = time()
@@ -109,6 +113,10 @@ class TestOptimizer:
     @pytest.mark.parametrize("hand_type", [name for name in HandType])
     def test_vector_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.vector, hand_type)
+
+        if not config_path.exists():
+            print(f"Skip the test for {robot_name.name} as the config file does not exist.")
+            return
 
         # Note: The parameters below are adjusted solely for this test
         # For retargeting from human to robot, their values should remain the default in the retargeting config
@@ -146,7 +154,7 @@ class TestOptimizer:
             computed_target_vector = computed_task_pos - computed_origin_pos
 
             # Vector difference
-            error = np.mean(np.linalg.norm(computed_target_vector - random_target_vector, axis=1))
+            error = np.mean(np.linalg.norm(computed_target_vector - random_target_vector, axis=-1))
             errors["pos"].append(error)
 
         tac = time()
@@ -158,6 +166,10 @@ class TestOptimizer:
     @pytest.mark.parametrize("hand_type", [name for name in HandType])
     def test_dexpilot_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.dexpilot, hand_type)
+
+        if not config_path.exists():
+            print(f"Skip the test for {robot_name.name} as the config file does not exist.")
+            return
 
         # Note: The parameters below are adjusted solely for this test
         # For retargeting from human to robot, their values should remain the default in the retargeting config
@@ -194,7 +206,7 @@ class TestOptimizer:
             computed_target_vector = computed_task_pos - computed_origin_pos
 
             # Vector difference
-            error = np.mean(np.linalg.norm(computed_target_vector - random_target_vector, axis=1))
+            error = np.mean(np.linalg.norm(computed_target_vector - random_target_vector, axis=-1))
             errors["pos"].append(error)
 
         tac = time()
