@@ -48,7 +48,11 @@ def main():
     # Vector retargeting
     print(f"Being retargeting profiling with a trajectory of {data_len} hand poses.")
     for robot_name in ROBOT_NAMES:
-        config_path = get_default_config_path(robot_name, RetargetingType.vector, HandType.right)
+        config_path = get_default_config_path(
+            robot_name,
+            RetargetingType.vector,
+            HandType.right if "gripper" not in ROBOT_NAME_MAP[robot_name] else HandType.both,
+        )
         retargeting = RetargetingConfig.load_from_file(config_path).build()
         total_time = profile_retargeting(retargeting, joint_data)
         print(
@@ -57,6 +61,9 @@ def main():
 
     # DexPilot retargeting
     for robot_name in ROBOT_NAMES:
+        if "gripper" in ROBOT_NAME_MAP[robot_name]:
+            print(f"Skip {ROBOT_NAME_MAP[robot_name]} for DexPilot retargeting.")
+            continue
         config_path = get_default_config_path(robot_name, RetargetingType.dexpilot, HandType.right)
         retargeting = RetargetingConfig.load_from_file(config_path).build()
         total_time = profile_retargeting(retargeting, joint_data)
