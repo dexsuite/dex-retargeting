@@ -51,7 +51,7 @@ def main():
         config_path = get_default_config_path(
             robot_name,
             RetargetingType.vector,
-            HandType.right if "gripper" not in ROBOT_NAME_MAP[robot_name] else HandType.both,
+            HandType.right,
         )
         retargeting = RetargetingConfig.load_from_file(config_path).build()
         total_time = profile_retargeting(retargeting, joint_data)

@@ -1,5 +1,6 @@
 import enum
 from pathlib import Path
+from typing import Optional
 
 
 class RobotName(enum.Enum):
@@ -21,7 +22,6 @@ class RetargetingType(enum.Enum):
 class HandType(enum.Enum):
     right = enum.auto()
     left = enum.auto()
-    both = enum.auto()
 
 
 ROBOT_NAME_MAP = {
@@ -37,7 +37,9 @@ ROBOT_NAME_MAP = {
 ROBOT_NAMES = list(ROBOT_NAME_MAP.keys())
 
 
-def get_default_config_path(robot_name: RobotName, retargeting_type: RetargetingType, hand_type: HandType) -> Path:
+def get_default_config_path(
+    robot_name: RobotName, retargeting_type: RetargetingType, hand_type: HandType
+) -> Optional[Path]:
     config_path = Path(__file__).parent / "configs"
     if retargeting_type is RetargetingType.position:
         config_path = config_path / "offline"
@@ -46,8 +48,14 @@ def get_default_config_path(robot_name: RobotName, retargeting_type: Retargeting
 
     robot_name_str = ROBOT_NAME_MAP[robot_name]
     hand_type_str = hand_type.name
-    if retargeting_type == RetargetingType.dexpilot:
-        config_name = f"{robot_name_str}_{hand_type_str}_dexpilot.yml"
+    if "gripper" in robot_name_str:
+        config_name = f"{robot_name_str}.yml"  # For gripper robots, only use gripper config file.
+        if retargeting_type == RetargetingType.dexpilot:
+            print(f"DexPilot retargeting is not supported for gripper.")
+            return None
     else:
-        config_name = f"{robot_name_str}_{hand_type_str}.yml"
+        if retargeting_type == RetargetingType.dexpilot:
+            config_name = f"{robot_name_str}_{hand_type_str}_dexpilot.yml"
+        else:
+            config_name = f"{robot_name_str}_{hand_type_str}.yml"
     return config_path / config_name

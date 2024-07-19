@@ -67,10 +67,6 @@ class TestOptimizer:
     def test_position_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.position, hand_type)
 
-        if not config_path.exists():
-            print(f"Skip the test for {robot_name.name} as the config file does not exist.")
-            return
-
         # Note: The parameters below are adjusted solely for this test
         # The smoothness penalty is deactivated here, meaning no low pass filter and no continuous joint value
         # This is because the test is focused solely on the efficiency of single step optimization
@@ -113,9 +109,7 @@ class TestOptimizer:
     @pytest.mark.parametrize("hand_type", [name for name in HandType])
     def test_vector_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.vector, hand_type)
-
-        if not config_path.exists():
-            print(f"Skip the test for {robot_name.name} as the config file does not exist.")
+        if config_path is None:
             return
 
         # Note: The parameters below are adjusted solely for this test
@@ -166,9 +160,7 @@ class TestOptimizer:
     @pytest.mark.parametrize("hand_type", [name for name in HandType])
     def test_dexpilot_optimizer(self, robot_name, hand_type):
         config_path = get_default_config_path(robot_name, RetargetingType.dexpilot, hand_type)
-
-        if not config_path.exists():
-            print(f"Skip the test for {robot_name.name} as the config file does not exist.")
+        if config_path is None:
             return
 
         # Note: The parameters below are adjusted solely for this test
