@@ -61,9 +61,6 @@ def main():
 
     # DexPilot retargeting
     for robot_name in ROBOT_NAMES:
-        if "gripper" in ROBOT_NAME_MAP[robot_name]:
-            print(f"Skip {ROBOT_NAME_MAP[robot_name]} for DexPilot retargeting.")
-            continue
         config_path = get_default_config_path(robot_name, RetargetingType.dexpilot, HandType.right)
         retargeting = RetargetingConfig.load_from_file(config_path).build()
         total_time = profile_retargeting(retargeting, joint_data)
