@@ -314,17 +314,21 @@ class DexPilotOptimizer(Optimizer):
         eta2=3e-2,
         scaling=1.0,
     ):
-        if len(finger_tip_link_names) < 4 or len(finger_tip_link_names) > 5:
-            raise ValueError(f"DexPilot optimizer can only be applied to hands with four or five fingers")
-        is_four_finger = len(finger_tip_link_names) == 4
-        if is_four_finger:
+        # if len(finger_tip_link_names) < 4 or len(finger_tip_link_names) > 5:
+        #     raise ValueError(f"DexPilot optimizer can only be applied to hands with four or five fingers")
+        self.num_fingers = len(finger_tip_link_names)
+
+        if self.num_fingers == 2:  # For gripper
+            origin_link_index = [2, 0, 0]
+            task_link_index = [1, 1, 2]
+        elif self.num_fingers == 4:
             origin_link_index = [2, 3, 4, 3, 4, 4, 0, 0, 0, 0]
             task_link_index = [1, 1, 1, 2, 2, 3, 1, 2, 3, 4]
-            self.num_fingers = 4
-        else:
+        elif self.num_fingers == 5:
             origin_link_index = [2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 0, 0, 0, 0, 0]
             task_link_index = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 1, 2, 3, 4, 5]
-            self.num_fingers = 5
+        else:
+            raise NotImplementedError(f"Unsupported number of fingers: {self.num_fingers}")
 
         if target_link_human_indices is None:
             target_link_human_indices = (np.stack([origin_link_index, task_link_index], axis=0) * 4).astype(int)
@@ -359,16 +363,23 @@ class DexPilotOptimizer(Optimizer):
         self.opt.set_ftol_abs(1e-6)
 
         # DexPilot cache
-        if is_four_finger:
+        if self.num_fingers == 2:
+            self.projected = np.zeros(1, dtype=bool)
+            self.s2_project_index_origin = np.array([], dtype=int)
+            self.s2_project_index_task = np.array([], dtype=int)
+            self.projected_dist = np.array([eta1] * 1)
+        elif self.num_fingers == 4:
             self.projected = np.zeros(6, dtype=bool)
             self.s2_project_index_origin = np.array([1, 2, 2], dtype=int)
             self.s2_project_index_task = np.array([0, 0, 1], dtype=int)
             self.projected_dist = np.array([eta1] * 3 + [eta2] * 3)
-        else:
+        elif self.num_fingers == 5:
             self.projected = np.zeros(10, dtype=bool)
             self.s2_project_index_origin = np.array([1, 2, 3, 2, 3, 3], dtype=int)
             self.s2_project_index_task = np.array([0, 0, 0, 1, 1, 2], dtype=int)
             self.projected_dist = np.array([eta1] * 4 + [eta2] * 6)
+        else:
+            raise NotImplementedError(f"Unsupported number of fingers: {self.num_fingers}")
 
     def get_objective_function(self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
         qpos = np.zeros(self.num_joints)
