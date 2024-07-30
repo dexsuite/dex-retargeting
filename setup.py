@@ -107,7 +107,7 @@ def setup_package():
         python_requires=">=3.7,<3.11",
         zip_safe=True,
         include_package_data=True,
-        package_data={'dex_retargeting': ['configs/**']},
+        package_data={"dex_retargeting": ["configs/**"]},
         install_requires=core_requirements,
         extras_require={
             "dev": dev_requirements,
