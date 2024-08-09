@@ -124,6 +124,10 @@ class SeqRetargeting:
             robot_qpos = self.filter.next(robot_qpos)
         return robot_qpos
 
+    def set_qpos(self, robot_qpos: np.ndarray):
+        target_qpos = robot_qpos[self.optimizer.idx_pin2target]
+        self.last_qpos = target_qpos
+
     def verbose(self):
         min_value = self.optimizer.opt.last_optimum_value()
         print(f"Retargeting {self.num_retargeting} times takes: {self.accumulated_time}s")

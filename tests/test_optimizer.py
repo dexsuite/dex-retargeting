@@ -30,7 +30,7 @@ class TestOptimizer:
 
         init_qpos = np.clip(
             random_qpos + np.random.randn(robot.dof) * 0.5, joint_limit[:, 0] + joint_eps, joint_limit[:, 1] - joint_eps
-        )[optimizer.idx_pin2target]
+        )
         return random_qpos, init_qpos
 
     @staticmethod
@@ -85,12 +85,16 @@ class TestOptimizer:
         errors = dict(pos=[], joint=[])
         np.random.seed(1)
         for i in range(num_optimization):
+
             # Sampled random position
             random_qpos, init_qpos, random_target_pos = self.generate_position_retargeting_data_gt(robot, optimizer)
             fixed_qpos = random_qpos[optimizer.idx_pin2fixed]
 
+            # Set the initial qpos for retargeting
+            retargeting.set_qpos(init_qpos)
+
             # Optimized position
-            computed_qpos = optimizer.retarget(random_target_pos, fixed_qpos=fixed_qpos, last_qpos=init_qpos[:])
+            computed_qpos = retargeting.retarget(random_target_pos, fixed_qpos=fixed_qpos)[optimizer.idx_pin2target]
 
             # Check results
             robot.compute_forward_kinematics(self.compute_pin_qpos(optimizer, computed_qpos, fixed_qpos))
@@ -136,6 +140,9 @@ class TestOptimizer:
             # Sampled random vector
             random_qpos, init_qpos, random_target_vector = self.generate_vector_retargeting_data_gt(robot, optimizer)
             fixed_qpos = random_qpos[optimizer.idx_pin2fixed]
+
+            # Using a different method compared to position retargeting to set initial qpos and perform optimization
+            init_qpos = init_qpos[optimizer.idx_pin2target]
 
             # Optimized vector
             computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=fixed_qpos, last_qpos=init_qpos[:])
@@ -187,6 +194,9 @@ class TestOptimizer:
             # Sampled random vector
             random_qpos, init_qpos, random_target_vector = self.generate_vector_retargeting_data_gt(robot, optimizer)
             fixed_qpos = random_qpos[optimizer.idx_pin2fixed]
+
+            # Using a different method compared to position retargeting to set initial qpos and perform optimization
+            init_qpos = init_qpos[optimizer.idx_pin2target]
 
             # Optimized vector
             computed_qpos = optimizer.retarget(random_target_vector, fixed_qpos=fixed_qpos, last_qpos=init_qpos[:])
