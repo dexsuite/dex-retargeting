@@ -163,11 +163,11 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
                 rgb = (np.clip(rgb, 0, 1) * 255).astype(np.uint8)
                 writer.write(rgb[..., ::-1])
             else:
-                for k in range(start_frame):
+                for _ in range(step_per_frame):
                     self.viewer.render()
 
-        if self.headless:
-            writer.release()
-        else:
+        if not self.headless:
             self.viewer.paused = True
             self.viewer.render()
+        else:
+            writer.release()
