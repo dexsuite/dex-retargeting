@@ -14,3 +14,4 @@ imgui.ini
 .DS_Store
 /.idea
 /log
+/temp/

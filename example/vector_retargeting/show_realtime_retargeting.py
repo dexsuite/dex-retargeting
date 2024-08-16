@@ -106,12 +106,18 @@ def start_retargeting(queue: multiprocessing.Queue, robot_dir: str, config_path:
 
     while True:
         try:
-            rgb = queue.get(timeout=5)
+            bgr = queue.get(timeout=5)
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
         except Empty:
             logger.error(f"Fail to fetch image from camera in 5 secs. Please check your web camera device.")
             return
 
-        _, joint_pos, _, _ = detector.detect(rgb)
+        _, joint_pos, keypoint_2d, _ = detector.detect(rgb)
+        bgr = detector.draw_skeleton_on_image(bgr, keypoint_2d, style="default")
+        cv2.imshow("realtime_retargeting_demo", bgr)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
         if joint_pos is None:
             logger.warning(f"{hand_type} hand is not detected.")
         else:
@@ -139,16 +145,10 @@ def produce_frame(queue: multiprocessing.Queue, camera_path: Optional[str] = Non
 
     while cap.isOpened():
         success, image = cap.read()
+        time.sleep(1 / 30.0)
         if not success:
             continue
-        frame = image
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         queue.put(image)
-        time.sleep(1 / 30.0)
-        cv2.imshow("demo", frame)
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
 
 
 def main(
