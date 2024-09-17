@@ -2,6 +2,24 @@ import enum
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+
+OPERATOR2MANO_RIGHT = np.array(
+    [
+        [0, 0, -1],
+        [-1, 0, 0],
+        [0, 1, 0],
+    ]
+)
+
+OPERATOR2MANO_LEFT = np.array(
+    [
+        [0, 0, -1],
+        [1, 0, 0],
+        [0, -1, 0],
+    ]
+)
+
 
 class RobotName(enum.Enum):
     allegro = enum.auto()
@@ -59,3 +77,9 @@ def get_default_config_path(
         else:
             config_name = f"{robot_name_str}_{hand_type_str}.yml"
     return config_path / config_name
+
+
+OPERATOR2MANO = {
+    HandType.right: OPERATOR2MANO_RIGHT,
+    HandType.left: OPERATOR2MANO_LEFT,
+}

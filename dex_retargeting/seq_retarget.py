@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 from pytransform3d import rotations
 
+from dex_retargeting.constants import OPERATOR2MANO, HandType
 from dex_retargeting.optimizer import Optimizer
 from dex_retargeting.optimizer_utils import LPFilter
 
@@ -39,40 +40,37 @@ class SeqRetargeting:
         # Warm started
         self.is_warm_started = False
 
-        # TODO: hack here
-        self.scene = None
-
-    def warm_start(self, wrist_pos: np.ndarray, wrist_orientation: np.ndarray, global_rot: np.array):
+    def warm_start(
+        self,
+        wrist_pos: np.ndarray,
+        wrist_quat: np.ndarray,
+        hand_type: HandType = HandType.right,
+        is_mano_convention: bool = False,
+    ):
         """
         Initialize the wrist joint pose using analytical computation instead of retargeting optimization.
         This function is specifically for position retargeting with the flying robot hand, i.e. has 6D free joint
         You are not expected to use this function for vector retargeting, e.g. when you are working on teleoperation
+
         Args:
             wrist_pos: position of the hand wrist, typically from human hand pose
-            wrist_orientation: orientation of the hand orientation, typically from human hand pose in MANO convention
-            global_rot:
-
+            wrist_quat: quaternion of the hand wrist, the same convention as the operator frame definition if not is_mano_convention
+            hand_type: hand type, used to determine the operator2mano matrix
+            is_mano_convention: whether the wrist_quat is in mano convention
         """
         # This function can only be used when the first joints of robot are free joints
+
         if len(wrist_pos) != 3:
-            raise ValueError(f"Wrist pos:{wrist_pos} is not a 3-dim vector.")
-        if len(wrist_orientation) != 3:
-            raise ValueError(f"Wrist orientation:{wrist_orientation} is not a 3-dim vector.")
+            raise ValueError(f"Wrist pos: {wrist_pos} is not a 3-dim vector.")
+        if len(wrist_quat) != 4:
+            raise ValueError(f"Wrist quat: {wrist_quat} is not a 4-dim vector.")
 
-        if np.linalg.norm(wrist_orientation) < 1e-3:
-            mat = np.eye(3)
-        else:
-            mat = rotations.matrix_from_compact_axis_angle(wrist_orientation)
-
+        operator2mano = OPERATOR2MANO[hand_type] if is_mano_convention else np.eye(3)
         robot = self.optimizer.robot
-        operator2mano = np.array([[0, 0, -1], [-1, 0, 0], [0, 1, 0]])
-        mat = global_rot.T @ mat @ operator2mano
         target_wrist_pose = np.eye(4)
-        target_wrist_pose[:3, :3] = mat
+        target_wrist_pose[:3, :3] = rotations.matrix_from_quaternion(wrist_quat) @ operator2mano.T
         target_wrist_pose[:3, 3] = wrist_pos
 
-        wrist_link_name = self.optimizer.wrist_link_name
-        wrist_link_id = self.optimizer.robot.get_link_index(wrist_link_name)
         name_list = [
             "dummy_x_translation_joint",
             "dummy_y_translation_joint",
@@ -81,6 +79,9 @@ class SeqRetargeting:
             "dummy_y_rotation_joint",
             "dummy_z_rotation_joint",
         ]
+        wrist_link_id = robot.get_joint_parent_child_frames(name_list[5])[1]
+
+        # Set the dummy joints angles to zero
         old_qpos = robot.q0
         new_qpos = old_qpos.copy()
         for num, joint_name in enumerate(self.optimizer.target_joint_names):
@@ -127,6 +128,13 @@ class SeqRetargeting:
     def set_qpos(self, robot_qpos: np.ndarray):
         target_qpos = robot_qpos[self.optimizer.idx_pin2target]
         self.last_qpos = target_qpos
+
+    def get_qpos(self, fixed_qpos: np.ndarray | None = None):
+        robot_qpos = np.zeros(self.optimizer.robot.dof)
+        robot_qpos[self.optimizer.idx_pin2target] = self.last_qpos
+        if fixed_qpos is not None:
+            robot_qpos[self.optimizer.idx_pin2fixed] = fixed_qpos
+        return robot_qpos
 
     def verbose(self):
         min_value = self.optimizer.opt.last_optimum_value()

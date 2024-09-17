@@ -2,38 +2,22 @@ import tempfile
 from pathlib import Path
 from typing import Dict, List
 
-import numpy as np
 import cv2
-from tqdm import trange
+import numpy as np
 import sapien
-import transforms3d.quaternions
+from hand_viewer import HandDatasetSAPIENViewer
+from pytransform3d import rotations
+from tqdm import trange
 
 from dex_retargeting import yourdfpy as urdf
-from dex_retargeting.constants import RobotName, HandType, get_default_config_path, RetargetingType
+from dex_retargeting.constants import (
+    HandType,
+    RetargetingType,
+    RobotName,
+    get_default_config_path,
+)
 from dex_retargeting.retargeting_config import RetargetingConfig
 from dex_retargeting.seq_retarget import SeqRetargeting
-from hand_viewer import HandDatasetSAPIENViewer
-
-ROBOT2MANO = np.array(
-    [
-        [0, 0, -1],
-        [-1, 0, 0],
-        [0, 1, 0],
-    ]
-)
-ROBOT2MANO_POSE = sapien.Pose(q=transforms3d.quaternions.mat2quat(ROBOT2MANO))
-
-
-def prepare_position_retargeting(joint_pos: np.array, link_hand_indices: np.ndarray):
-    link_pos = joint_pos[link_hand_indices]
-    return link_pos
-
-
-def prepare_vector_retargeting(joint_pos: np.array, link_hand_indices_pairs: np.ndarray):
-    joint_pos = joint_pos @ ROBOT2MANO
-    origin_link_pos = joint_pos[link_hand_indices_pairs[0]]
-    task_link_pos = joint_pos[link_hand_indices_pairs[1]]
-    return task_link_pos - origin_link_pos
 
 
 class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
@@ -45,6 +29,7 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
         self.robot_file_names: List[str] = []
         self.retargetings: List[SeqRetargeting] = []
         self.retarget2sapien: List[np.ndarray] = []
+        self.hand_type = hand_type
 
         # Load optimizer and filter
         loader = self.scene.create_urdf_loader()
@@ -126,7 +111,22 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
             robot_names = "_".join(robot_names)
             video_path = Path(__file__).parent.resolve() / f"data/{robot_names}_video.mp4"
             writer = cv2.VideoWriter(
-                str(video_path), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (self.camera.get_width(), self.camera.get_height())
+                str(video_path),
+                cv2.VideoWriter_fourcc(*"mp4v"),
+                30.0,
+                (self.camera.get_width(), self.camera.get_height()),
+            )
+
+        # Warm start
+        hand_pose_start = hand_pose[start_frame]
+        wrist_quat = rotations.quaternion_from_compact_axis_angle(hand_pose_start[0, 0:3])
+        vertex, joint = self._compute_hand_geometry(hand_pose_start)
+        for robot, retargeting, retarget2sapien in zip(self.robots, self.retargetings, self.retarget2sapien):
+            retargeting.warm_start(
+                joint[0, :],
+                wrist_quat,
+                hand_type=self.hand_type,
+                is_mano_convention=True,
             )
 
         # Loop rendering

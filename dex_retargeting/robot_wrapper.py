@@ -60,7 +60,19 @@ class RobotWrapper:
     def get_link_index(self, name: str):
         if name not in self.link_names:
             raise ValueError(f"{name} is not a link name. Valid link names: \n{self.link_names}")
-        return self.model.getFrameId(name)
+        return self.model.getFrameId(name, pin.BODY)
+
+    def get_joint_parent_child_frames(self, joint_name: str):
+        joint_id = self.model.getFrameId(joint_name)
+        parent_id = self.model.frames[joint_id].parent
+        child_id = -1
+        for idx, frame in enumerate(self.model.frames):
+            if frame.previousFrame == joint_id:
+                child_id = idx
+        if child_id == -1:
+            raise ValueError(f"Can not find child link of {joint_name}")
+
+        return parent_id, child_id
 
     # -------------------------------------------------------------------------- #
     # Kinematics function
