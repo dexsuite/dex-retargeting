@@ -129,7 +129,7 @@ class SeqRetargeting:
         target_qpos = robot_qpos[self.optimizer.idx_pin2target]
         self.last_qpos = target_qpos
 
-    def get_qpos(self, fixed_qpos: np.ndarray | None = None):
+    def get_qpos(self, fixed_qpos: Optional[np.ndarray] = None):
         robot_qpos = np.zeros(self.optimizer.robot.dof)
         robot_qpos[self.optimizer.idx_pin2target] = self.last_qpos
         if fixed_qpos is not None:
