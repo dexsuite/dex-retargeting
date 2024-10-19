@@ -104,7 +104,7 @@ def setup_package():
         license="MIT",
         license_files=("LICENSE",),
         packages=packages,
-        python_requires=">=3.7,<3.11",
+        python_requires=">=3.7,<3.13",
         zip_safe=True,
         include_package_data=True,
         package_data={"dex_retargeting": ["configs/**"]},
