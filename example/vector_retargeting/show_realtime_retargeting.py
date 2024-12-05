@@ -139,7 +139,7 @@ def start_retargeting(queue: multiprocessing.Queue, robot_dir: str, config_path:
 
 def produce_frame(queue: multiprocessing.Queue, camera_path: Optional[str] = None):
     if camera_path is None:
-        cap = cv2.VideoCapture(4)
+        cap = cv2.VideoCapture(0)
     else:
         cap = cv2.VideoCapture(camera_path)
 
