@@ -17,10 +17,10 @@ with open(_here / name / "__init__.py") as f:
         raise RuntimeError("Unable to find __version__ string.")
 
 core_requirements = [
-    "numpy>=1.21.0",
+    "numpy>=1.21.0,<2.0.0",
     "pytransform3d>=3.5.0",
     "pin>=2.7.0",
-    "nlopt>=2.6.1",
+    "nlopt>=2.6.1,<2.8.0",
     "trimesh>=4.4.0",
     "anytree>=2.12.0",
     "pyyaml>=6.0.0",
