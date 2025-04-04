@@ -5,7 +5,10 @@ import nlopt
 import numpy as np
 import torch
 
-from dex_retargeting.kinematics_adaptor import KinematicAdaptor, MimicJointKinematicAdaptor
+from dex_retargeting.kinematics_adaptor import (
+    KinematicAdaptor,
+    MimicJointKinematicAdaptor,
+)
 from dex_retargeting.robot_wrapper import RobotWrapper
 
 
@@ -25,12 +28,16 @@ class Optimizer:
         idx_pin2target = []
         for target_joint_name in target_joint_names:
             if target_joint_name not in joint_names:
-                raise ValueError(f"Joint {target_joint_name} given does not appear to be in robot XML.")
+                raise ValueError(
+                    f"Joint {target_joint_name} given does not appear to be in robot XML."
+                )
             idx_pin2target.append(joint_names.index(target_joint_name))
         self.target_joint_names = target_joint_names
         self.idx_pin2target = np.array(idx_pin2target)
 
-        self.idx_pin2fixed = np.array([i for i in range(robot.dof) if i not in idx_pin2target], dtype=int)
+        self.idx_pin2fixed = np.array(
+            [i for i in range(robot.dof) if i not in idx_pin2target], dtype=int
+        )
         self.opt = nlopt.opt(nlopt.LD_SLSQP, len(idx_pin2target))
         self.opt_dof = len(idx_pin2target)  # This dof includes the mimic joints
 
@@ -46,7 +53,9 @@ class Optimizer:
 
     def set_joint_limit(self, joint_limits: np.ndarray, epsilon=1e-3):
         if joint_limits.shape != (self.opt_dof, 2):
-            raise ValueError(f"Expect joint limits have shape: {(self.opt_dof, 2)}, but get {joint_limits.shape}")
+            raise ValueError(
+                f"Expect joint limits have shape: {(self.opt_dof, 2)}, but get {joint_limits.shape}"
+            )
         self.opt.set_lower_bounds((joint_limits[:, 0] - epsilon).tolist())
         self.opt.set_upper_bounds((joint_limits[:, 1] + epsilon).tolist())
 
@@ -60,7 +69,9 @@ class Optimizer:
         if isinstance(adaptor, MimicJointKinematicAdaptor):
             fixed_idx = self.idx_pin2fixed
             mimic_idx = adaptor.idx_pin2mimic
-            new_fixed_id = np.array([x for x in fixed_idx if x not in mimic_idx], dtype=int)
+            new_fixed_id = np.array(
+                [x for x in fixed_idx if x not in mimic_idx], dtype=int
+            )
             self.idx_pin2fixed = new_fixed_id
 
     def retarget(self, ref_value, fixed_qpos, last_qpos):
@@ -78,7 +89,9 @@ class Optimizer:
             raise ValueError(
                 f"Optimizer has {len(self.idx_pin2fixed)} joints but non_target_qpos {fixed_qpos} is given"
             )
-        objective_fn = self.get_objective_function(ref_value, fixed_qpos, np.array(last_qpos).astype(np.float32))
+        objective_fn = self.get_objective_function(
+            ref_value, fixed_qpos, np.array(last_qpos).astype(np.float32)
+        )
 
         self.opt.set_min_objective(objective_fn)
         try:
@@ -89,7 +102,9 @@ class Optimizer:
             return np.array(last_qpos, dtype=np.float32)
 
     @abstractmethod
-    def get_objective_function(self, ref_value: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
+    def get_objective_function(
+        self, ref_value: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray
+    ):
         pass
 
     @property
@@ -120,7 +135,9 @@ class PositionOptimizer(Optimizer):
 
         self.opt.set_ftol_abs(1e-5)
 
-    def get_objective_function(self, target_pos: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
+    def get_objective_function(
+        self, target_pos: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray
+    ):
         qpos = np.zeros(self.num_joints)
         qpos[self.idx_pin2fixed] = fixed_qpos
         torch_target_pos = torch.as_tensor(target_pos)
@@ -134,8 +151,12 @@ class PositionOptimizer(Optimizer):
                 qpos[:] = self.adaptor.forward_qpos(qpos)[:]
 
             self.robot.compute_forward_kinematics(qpos)
-            target_link_poses = [self.robot.get_link_pose(index) for index in self.target_link_indices]
-            body_pos = np.stack([pose[:3, 3] for pose in target_link_poses], axis=0)  # (n ,3)
+            target_link_poses = [
+                self.robot.get_link_pose(index) for index in self.target_link_indices
+            ]
+            body_pos = np.stack(
+                [pose[:3, 3] for pose in target_link_poses], axis=0
+            )  # (n ,3)
 
             # Torch computation for accurate loss and grad
             torch_body_pos = torch.as_tensor(body_pos)
@@ -148,7 +169,9 @@ class PositionOptimizer(Optimizer):
             if grad.size > 0:
                 jacobians = []
                 for i, index in enumerate(self.target_link_indices):
-                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[:3, ...]
+                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(
+                        qpos, index
+                    )[:3, ...]
                     link_pose = target_link_poses[i]
                     link_rot = link_pose[:3, :3]
                     link_kinematics_jacobian = link_rot @ link_body_jacobian
@@ -200,18 +223,24 @@ class VectorOptimizer(Optimizer):
 
         # Computation cache for better performance
         # For one link used in multiple vectors, e.g. hand palm, we do not want to compute it multiple times
-        self.computed_link_names = list(set(target_origin_link_names).union(set(target_task_link_names)))
+        self.computed_link_names = list(
+            set(target_origin_link_names).union(set(target_task_link_names))
+        )
         self.origin_link_indices = torch.tensor(
             [self.computed_link_names.index(name) for name in target_origin_link_names]
         )
-        self.task_link_indices = torch.tensor([self.computed_link_names.index(name) for name in target_task_link_names])
+        self.task_link_indices = torch.tensor(
+            [self.computed_link_names.index(name) for name in target_task_link_names]
+        )
 
         # Cache link indices that will involve in kinematics computation
         self.computed_link_indices = self.get_link_indices(self.computed_link_names)
 
         self.opt.set_ftol_abs(1e-6)
 
-    def get_objective_function(self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
+    def get_objective_function(
+        self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray
+    ):
         qpos = np.zeros(self.num_joints)
         qpos[self.idx_pin2fixed] = fixed_qpos
         torch_target_vec = torch.as_tensor(target_vector) * self.scaling
@@ -225,7 +254,9 @@ class VectorOptimizer(Optimizer):
                 qpos[:] = self.adaptor.forward_qpos(qpos)[:]
 
             self.robot.compute_forward_kinematics(qpos)
-            target_link_poses = [self.robot.get_link_pose(index) for index in self.computed_link_indices]
+            target_link_poses = [
+                self.robot.get_link_pose(index) for index in self.computed_link_indices
+            ]
             body_pos = np.array([pose[:3, 3] for pose in target_link_poses])
 
             # Torch computation for accurate loss and grad
@@ -245,7 +276,9 @@ class VectorOptimizer(Optimizer):
             if grad.size > 0:
                 jacobians = []
                 for i, index in enumerate(self.computed_link_indices):
-                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[:3, ...]
+                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(
+                        qpos, index
+                    )[:3, ...]
                     link_pose = target_link_poses[i]
                     link_rot = link_pose[:3, :3]
                     link_kinematics_jacobian = link_rot @ link_body_jacobian
@@ -321,10 +354,14 @@ class DexPilotOptimizer(Optimizer):
             )
         self.num_fingers = len(finger_tip_link_names)
 
-        origin_link_index, task_link_index = self.generate_link_indices(self.num_fingers)
+        origin_link_index, task_link_index = self.generate_link_indices(
+            self.num_fingers
+        )
 
         if target_link_human_indices is None:
-            target_link_human_indices = (np.stack([origin_link_index, task_link_index], axis=0) * 4).astype(int)
+            target_link_human_indices = (
+                np.stack([origin_link_index, task_link_index], axis=0) * 4
+            ).astype(int)
         link_names = [wrist_link_name] + finger_tip_link_names
         target_origin_link_names = [link_names[index] for index in origin_link_index]
         target_task_link_names = [link_names[index] for index in task_link_index]
@@ -344,11 +381,15 @@ class DexPilotOptimizer(Optimizer):
 
         # Computation cache for better performance
         # For one link used in multiple vectors, e.g. hand palm, we do not want to compute it multiple times
-        self.computed_link_names = list(set(target_origin_link_names).union(set(target_task_link_names)))
+        self.computed_link_names = list(
+            set(target_origin_link_names).union(set(target_task_link_names))
+        )
         self.origin_link_indices = torch.tensor(
             [self.computed_link_names.index(name) for name in target_origin_link_names]
         )
-        self.task_link_indices = torch.tensor([self.computed_link_names.index(name) for name in target_task_link_names])
+        self.task_link_indices = torch.tensor(
+            [self.computed_link_names.index(name) for name in target_task_link_names]
+        )
 
         # Sanity check and cache link indices
         self.computed_link_indices = self.get_link_indices(self.computed_link_names)
@@ -356,9 +397,12 @@ class DexPilotOptimizer(Optimizer):
         self.opt.set_ftol_abs(1e-6)
 
         # DexPilot cache
-        self.projected, self.s2_project_index_origin, self.s2_project_index_task, self.projected_dist = (
-            self.set_dexpilot_cache(self.num_fingers, eta1, eta2)
-        )
+        (
+            self.projected,
+            self.s2_project_index_origin,
+            self.s2_project_index_task,
+            self.projected_dist,
+        ) = self.set_dexpilot_cache(self.num_fingers, eta1, eta2)
 
     @staticmethod
     def generate_link_indices(num_fingers):
@@ -402,11 +446,16 @@ class DexPilotOptimizer(Optimizer):
                 s2_project_index_origin.append(j)
                 s2_project_index_task.append(i)
 
-        projected_dist = np.array([eta1] * (num_fingers - 1) + [eta2] * ((num_fingers - 1) * (num_fingers - 2) // 2))
+        projected_dist = np.array(
+            [eta1] * (num_fingers - 1)
+            + [eta2] * ((num_fingers - 1) * (num_fingers - 2) // 2)
+        )
 
         return projected, s2_project_index_origin, s2_project_index_task, projected_dist
 
-    def get_objective_function(self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray):
+    def get_objective_function(
+        self, target_vector: np.ndarray, fixed_qpos: np.ndarray, last_qpos: np.ndarray
+    ):
         qpos = np.zeros(self.num_joints)
         qpos[self.idx_pin2fixed] = fixed_qpos
 
@@ -419,7 +468,8 @@ class DexPilotOptimizer(Optimizer):
         self.projected[:len_s1][target_vec_dist[0:len_s1] < self.project_dist] = True
         self.projected[:len_s1][target_vec_dist[0:len_s1] > self.escape_dist] = False
         self.projected[len_s1:len_proj] = np.logical_and(
-            self.projected[:len_s1][self.s2_project_index_origin], self.projected[:len_s1][self.s2_project_index_task]
+            self.projected[:len_s1][self.s2_project_index_origin],
+            self.projected[:len_s1][self.s2_project_index_task],
         )
         self.projected[len_s1:len_proj] = np.logical_and(
             self.projected[len_s1:len_proj], target_vec_dist[len_s1:len_proj] <= 0.03
@@ -433,7 +483,13 @@ class DexPilotOptimizer(Optimizer):
         # We change the weight to 10 instead of 1 here, for vector originate from wrist to fingertips
         # This ensures better intuitive mapping due wrong pose detection
         weight = torch.from_numpy(
-            np.concatenate([weight, np.ones(self.num_fingers, dtype=np.float32) * len_proj + self.num_fingers])
+            np.concatenate(
+                [
+                    weight,
+                    np.ones(self.num_fingers, dtype=np.float32) * len_proj
+                    + self.num_fingers,
+                ]
+            )
         )
 
         # Compute reference distance vector
@@ -442,8 +498,12 @@ class DexPilotOptimizer(Optimizer):
         projected_vec = dir_vec * self.projected_dist[:, None]  # (6, 3)
 
         # Compute final reference vector
-        reference_vec = np.where(self.projected[:, None], projected_vec, normal_vec[:len_proj])  # (6, 3)
-        reference_vec = np.concatenate([reference_vec, normal_vec[len_proj:]], axis=0)  # (10, 3)
+        reference_vec = np.where(
+            self.projected[:, None], projected_vec, normal_vec[:len_proj]
+        )  # (6, 3)
+        reference_vec = np.concatenate(
+            [reference_vec, normal_vec[len_proj:]], axis=0
+        )  # (10, 3)
         torch_target_vec = torch.as_tensor(reference_vec, dtype=torch.float32)
         torch_target_vec.requires_grad_(False)
 
@@ -455,7 +515,9 @@ class DexPilotOptimizer(Optimizer):
                 qpos[:] = self.adaptor.forward_qpos(qpos)[:]
 
             self.robot.compute_forward_kinematics(qpos)
-            target_link_poses = [self.robot.get_link_pose(index) for index in self.computed_link_indices]
+            target_link_poses = [
+                self.robot.get_link_pose(index) for index in self.computed_link_indices
+            ]
             body_pos = np.array([pose[:3, 3] for pose in target_link_poses])
 
             # Torch computation for accurate loss and grad
@@ -471,7 +533,9 @@ class DexPilotOptimizer(Optimizer):
             # Different from the original DexPilot, we use huber loss here instead of the squared dist
             vec_dist = torch.norm(robot_vec - torch_target_vec, dim=1, keepdim=False)
             huber_distance = (
-                self.huber_loss(vec_dist, torch.zeros_like(vec_dist)) * weight / (robot_vec.shape[0])
+                self.huber_loss(vec_dist, torch.zeros_like(vec_dist))
+                * weight
+                / (robot_vec.shape[0])
             ).sum()
             huber_distance = huber_distance.sum()
             result = huber_distance.cpu().detach().item()
@@ -479,7 +543,9 @@ class DexPilotOptimizer(Optimizer):
             if grad.size > 0:
                 jacobians = []
                 for i, index in enumerate(self.computed_link_indices):
-                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(qpos, index)[:3, ...]
+                    link_body_jacobian = self.robot.compute_single_link_local_jacobian(
+                        qpos, index
+                    )[:3, ...]
                     link_pose = target_link_poses[i]
                     link_rot = link_pose[:3, :3]
                     link_kinematics_jacobian = link_rot @ link_body_jacobian

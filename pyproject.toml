@@ -1,15 +1,59 @@
-[tool.black]
-line_length = 120
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.isort]
-profile = "black"
-skip_gitignore = true
+[project]
+name = "dex_retargeting"
+version = "0.4.7"
+description = "Hand pose retargeting for dexterous robot hand."
+authors = [{ name = "Yuzhe Qin", email = "y1qin@ucsd.edu" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.7,<3.13"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+urls = { "Homepage" = "https://github.com/dexsuite/dex-retargeting" }
 
-[tool.mypy]
-plugins = ["numpy.typing.mypy_plugin"]
+dependencies = [
+    "numpy>=1.21.0,<2.0.0",
+    "pytransform3d>=3.5.0",
+    "pin>=2.7.0",
+    "nlopt>=2.6.1,<2.8.0",
+    "anytree>=2.12.0",
+    "pyyaml>=6.0.0",
+    "lxml>=5.2.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "isort"]
+example = [
+    "tyro",
+    "tqdm",
+    "opencv-python",
+    "mediapipe",
+    "sapien==3.0.0b0",
+    "loguru",
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["dex_retargeting"]
+split-on-trailing-comma = false
+
+[tool.ruff]
+line-length = 88
 
 [tool.pytest.ini_options]
 addopts = "--disable-warnings"
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]

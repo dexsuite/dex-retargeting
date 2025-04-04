@@ -30,6 +30,8 @@ def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: st
 
                 rgb = frame[..., ::-1]
                 num_box, joint_pos, keypoint_2d, mediapipe_wrist_rot = detector.detect(rgb)
+                if num_box == 0:
+                    continue
 
                 retargeting_type = retargeting.optimizer.retargeting_type
                 indices = retargeting.optimizer.target_link_human_indices
