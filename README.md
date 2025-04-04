@@ -48,6 +48,19 @@ cd dex-retargeting
 pip install -e ".[example]"
 ```
 
+## Changelog
+
+### v0.5.0
+
+- **Numpy Support Update**: Starting from this version, `dex-retargeting` supports `numpy >= 2.0.0`. If you need to use `numpy < 2.0.0`, you can install an earlier version of `dex-retargeting` using:
+  ```bash
+  pip install "dex-retargeting<0.5.0"
+  ```
+
+- **Mediapipe Compatibility**: Although `mediapipe` lists `numpy 1.x` as a dependency, it is compatible with `numpy >= 2.0.0`. You can safely ignore any warnings related to this and continue using `numpy 2.0.0` or higher.
+
+- **Dependency Cleanup**: Removed `trimesh` as a dependency to simplify installation and reduce potential conflicts. The core functionality of `dex-retargeting` no longer requires mesh processing capabilities.
+
 ## Examples
 
 ### Retargeting from human hand video

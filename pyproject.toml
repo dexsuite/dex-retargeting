@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dex_retargeting"
-version = "0.4.7"
+version = "0.5.0"
 description = "Hand pose retargeting for dexterous robot hand."
 authors = [{ name = "Yuzhe Qin", email = "y1qin@ucsd.edu" }]
 license = { text = "MIT" }
@@ -26,10 +26,10 @@ classifiers = [
 urls = { "Homepage" = "https://github.com/dexsuite/dex-retargeting" }
 
 dependencies = [
-    "numpy>=1.21.0,<2.0.0",
+    "numpy>=2.0.0",
     "pytransform3d>=3.5.0",
-    "pin>=2.7.0",
-    "nlopt>=2.6.1,<2.8.0",
+    "pin>=3.3.1",
+    "nlopt>=2.8.0",
     "anytree>=2.12.0",
     "pyyaml>=6.0.0",
     "lxml>=5.2.2",
