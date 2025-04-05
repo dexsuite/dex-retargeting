@@ -25,15 +25,13 @@ jobs:
       - name: Install dependencies
         run: |
           git submodule update --init
-          python -m pip install --upgrade pip
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install --upgrade -e .[dev]
+          python -m pip install uv
+          uv pip install --system torch --index-url https://download.pytorch.org/whl/cpu
+          uv pip install --system -e .[dev]
       - name: Run Black
         run: |
-          black dex_retargeting/ tests/ --check
-      #      - name: Run Pyright
-      #        run: |
-      #          pyright
+          ruff check src/
+          ruff format src/ --check
       - name: Test with pytest
         run: |
           pytest
