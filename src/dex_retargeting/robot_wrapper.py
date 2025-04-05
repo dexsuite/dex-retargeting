@@ -20,7 +20,7 @@ class RobotWrapper:
 
         self.q0 = pin.neutral(self.model)
         if self.model.nv != self.model.nq:
-            raise NotImplementedError(f"Can not handle robot with special joint.")
+            raise NotImplementedError("Can not handle robot with special joint.")
 
     # -------------------------------------------------------------------------- #
     # Robot property
@@ -59,7 +59,9 @@ class RobotWrapper:
 
     def get_link_index(self, name: str):
         if name not in self.link_names:
-            raise ValueError(f"{name} is not a link name. Valid link names: \n{self.link_names}")
+            raise ValueError(
+                f"{name} is not a link name. Valid link names: \n{self.link_names}"
+            )
         return self.model.getFrameId(name, pin.BODY)
 
     def get_joint_parent_child_frames(self, joint_name: str):

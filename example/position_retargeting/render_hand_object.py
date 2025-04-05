@@ -25,7 +25,9 @@ def viz_hand_object(robots: Optional[Tuple[RobotName]], data_root: Path, fps: in
     if robots is None:
         viewer = HandDatasetSAPIENViewer(headless=True, use_ray_tracing=True)
     else:
-        viewer = RobotHandDatasetSAPIENViewer(list(robots), HandType.right, headless=True, use_ray_tracing=True)
+        viewer = RobotHandDatasetSAPIENViewer(
+            list(robots), HandType.right, headless=True, use_ray_tracing=True
+        )
 
     # Data ID, feel free to change it to visualize different trajectory
     data_id = 4
@@ -50,7 +52,9 @@ def main(dexycb_dir: str, robots: Optional[List[RobotName]] = None, fps: int = 1
 
     """
     data_root = Path(dexycb_dir).absolute()
-    robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    robot_dir = (
+        Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    )
     RetargetingConfig.set_default_urdf_dir(robot_dir)
     if not data_root.exists():
         raise ValueError(f"Path to DexYCB dir: {data_root} does not exist.")

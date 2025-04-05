@@ -34,12 +34,14 @@ ROBOT_NAMES = list(VECTOR_CONFIG_DICT.keys())
 
 
 class TestRetargetingConfig:
-    config_dir = Path(__file__).parent.parent / "dex_retargeting" / "configs"
+    config_dir = Path(__file__).parent.parent / "src/dex_retargeting" / "configs"
     robot_dir = Path(__file__).parent.parent / "assets" / "robots" / "hands"
     RetargetingConfig.set_default_urdf_dir(str(robot_dir.absolute()))
 
     config_paths = (
-        list(VECTOR_CONFIG_DICT.values()) + list(POSITION_CONFIG_DICT.values()) + list(DEXPILOT_CONFIG_DICT.values())
+        list(VECTOR_CONFIG_DICT.values())
+        + list(POSITION_CONFIG_DICT.values())
+        + list(DEXPILOT_CONFIG_DICT.values())
     )
 
     @pytest.mark.parametrize("config_path", config_paths)

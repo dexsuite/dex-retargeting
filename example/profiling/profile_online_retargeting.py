@@ -29,7 +29,7 @@ def profile_retargeting(retargeting: SeqRetargeting, data: List[np.ndarray]):
             task_indices = indices[1, :]
             ref_value = joint_pos[task_indices, :] - joint_pos[origin_indices, :]
         tic = time.perf_counter()
-        qpos = retargeting.retarget(ref_value)
+        _ = retargeting.retarget(ref_value)
         tac = time.perf_counter()
         total_time += tac - tic
 
@@ -37,12 +37,14 @@ def profile_retargeting(retargeting: SeqRetargeting, data: List[np.ndarray]):
 
 
 def main():
-
-    robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    robot_dir = (
+        Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    )
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
 
     # Load data
-    joint_data = np.load("human_joint_right.pkl", allow_pickle=True)
+    data_path = Path(__file__).absolute().parent / "human_joint_right.pkl"
+    joint_data = np.load(data_path, allow_pickle=True)
     data_len = len(joint_data)
 
     # Vector retargeting
@@ -61,7 +63,9 @@ def main():
 
     # DexPilot retargeting
     for robot_name in ROBOT_NAMES:
-        config_path = get_default_config_path(robot_name, RetargetingType.dexpilot, HandType.right)
+        config_path = get_default_config_path(
+            robot_name, RetargetingType.dexpilot, HandType.right
+        )
         retargeting = RetargetingConfig.load_from_file(config_path).build()
         total_time = profile_retargeting(retargeting, joint_data)
         print(

@@ -24,7 +24,13 @@ OPERATOR2MANO_LEFT = np.array(
 
 
 class SingleHandDetector:
-    def __init__(self, hand_type="Right", min_detection_confidence=0.8, min_tracking_confidence=0.8, selfie=False):
+    def __init__(
+        self,
+        hand_type="Right",
+        min_detection_confidence=0.8,
+        min_tracking_confidence=0.8,
+        selfie=False,
+    ):
         self.hand_detector = mp.solutions.hands.Hands(
             static_image_mode=False,
             max_num_hands=1,
@@ -32,12 +38,16 @@ class SingleHandDetector:
             min_tracking_confidence=min_tracking_confidence,
         )
         self.selfie = selfie
-        self.operator2mano = OPERATOR2MANO_RIGHT if hand_type == "Right" else OPERATOR2MANO_LEFT
+        self.operator2mano = (
+            OPERATOR2MANO_RIGHT if hand_type == "Right" else OPERATOR2MANO_LEFT
+        )
         inverse_hand_dict = {"Right": "Left", "Left": "Right"}
         self.detected_hand_type = hand_type if selfie else inverse_hand_dict[hand_type]
 
     @staticmethod
-    def draw_skeleton_on_image(image, keypoint_2d: landmark_pb2.NormalizedLandmarkList, style="white"):
+    def draw_skeleton_on_image(
+        image, keypoint_2d: landmark_pb2.NormalizedLandmarkList, style="white"
+    ):
         if style == "default":
             mp.solutions.drawing_utils.draw_landmarks(
                 image,
@@ -49,7 +59,9 @@ class SingleHandDetector:
         elif style == "white":
             landmark_style = {}
             for landmark in HandLandmark:
-                landmark_style[landmark] = DrawingSpec(color=(255, 48, 48), circle_radius=4, thickness=-1)
+                landmark_style[landmark] = DrawingSpec(
+                    color=(255, 48, 48), circle_radius=4, thickness=-1
+                )
 
             connections = hands_connections.HAND_CONNECTIONS
             connection_style = {}
@@ -57,7 +69,11 @@ class SingleHandDetector:
                 connection_style[pair] = DrawingSpec(thickness=2)
 
             mp.solutions.drawing_utils.draw_landmarks(
-                image, keypoint_2d, mp.solutions.hands.HAND_CONNECTIONS, landmark_style, connection_style
+                image,
+                keypoint_2d,
+                mp.solutions.hands.HAND_CONNECTIONS,
+                landmark_style,
+                connection_style,
             )
 
         return image
@@ -89,7 +105,9 @@ class SingleHandDetector:
         return num_box, joint_pos, keypoint_2d, mediapipe_wrist_rot
 
     @staticmethod
-    def parse_keypoint_3d(keypoint_3d: framework.formats.landmark_pb2.LandmarkList) -> np.ndarray:
+    def parse_keypoint_3d(
+        keypoint_3d: framework.formats.landmark_pb2.LandmarkList,
+    ) -> np.ndarray:
         keypoint = np.empty([21, 3])
         for i in range(21):
             keypoint[i][0] = keypoint_3d.landmark[i].x
@@ -98,7 +116,9 @@ class SingleHandDetector:
         return keypoint
 
     @staticmethod
-    def parse_keypoint_2d(keypoint_2d: landmark_pb2.NormalizedLandmarkList, img_size) -> np.ndarray:
+    def parse_keypoint_2d(
+        keypoint_2d: landmark_pb2.NormalizedLandmarkList, img_size
+    ) -> np.ndarray:
         keypoint = np.empty([21, 2])
         for i in range(21):
             keypoint[i][0] = keypoint_2d.landmark[i].x

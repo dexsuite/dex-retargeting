@@ -23,21 +23,27 @@ class MANOLayer(Module):
 
         self._side = side
         self._betas = betas
-        self._mano_layer = ManoLayer(flat_hand_mean=False,
-                                     ncomps=45,
-                                     side=self._side,
-                                     mano_root='manopth/mano/models',
-                                     use_pca=True)
+        self._mano_layer = ManoLayer(
+            flat_hand_mean=False,
+            ncomps=45,
+            side=self._side,
+            mano_root="manopth/mano/models",
+            use_pca=True,
+        )
 
         b = torch.from_numpy(self._betas).unsqueeze(0)
         f = self._mano_layer.th_faces
-        self.register_buffer('b', b)
-        self.register_buffer('f', f)
+        self.register_buffer("b", b)
+        self.register_buffer("f", f)
 
-        v = torch.matmul(self._mano_layer.th_shapedirs, self.b.transpose(
-            0, 1)).permute(2, 0, 1) + self._mano_layer.th_v_template
+        v = (
+            torch.matmul(self._mano_layer.th_shapedirs, self.b.transpose(0, 1)).permute(
+                2, 0, 1
+            )
+            + self._mano_layer.th_v_template
+        )
         r = torch.matmul(self._mano_layer.th_J_regressor[0], v)
-        self.register_buffer('root_trans', r)
+        self.register_buffer("root_trans", r)
 
     def forward(self, p, t):
         """Forward function.

@@ -58,8 +58,12 @@ class HandDatasetSAPIENViewer:
         scene.set_timestep(1 / 240)
 
         # Lighting
-        scene.set_environment_map(create_dome_envmap(sky_color=[0.2, 0.2, 0.2], ground_color=[0.2, 0.2, 0.2]))
-        scene.add_directional_light(np.array([1, -1, -1]), np.array([2, 2, 2]), shadow=True)
+        scene.set_environment_map(
+            create_dome_envmap(sky_color=[0.2, 0.2, 0.2], ground_color=[0.2, 0.2, 0.2])
+        )
+        scene.add_directional_light(
+            np.array([1, -1, -1]), np.array([2, 2, 2]), shadow=True
+        )
         scene.add_directional_light([0, 0, -1], [1.8, 1.6, 1.6], shadow=False)
         scene.set_ambient_light(np.array([0.2, 0.2, 0.2]))
 
@@ -81,7 +85,9 @@ class HandDatasetSAPIENViewer:
             self.viewer = viewer
         else:
             self.camera = scene.add_camera("cam", 1920, 640, 0.9, 0.01, 100)
-            self.camera.set_local_pose(sapien.Pose([1.5, 0, 1], [0, 0.389418, 0, -0.921061]))
+            self.camera.set_local_pose(
+                sapien.Pose([1.5, 0, 1], [0, 0.389418, 0, -0.921061])
+            )
 
         self.headless = headless
 
@@ -90,19 +96,33 @@ class HandDatasetSAPIENViewer:
         white_diffuse.set_base_color(np.array([0.8, 0.8, 0.8, 1]))
         white_diffuse.set_roughness(0.9)
         builder = scene.create_actor_builder()
-        builder.add_box_collision(sapien.Pose([0, 0, -0.02]), half_size=np.array([0.5, 2.0, 0.02]))
-        builder.add_box_visual(sapien.Pose([0, 0, -0.02]), half_size=np.array([0.5, 2.0, 0.02]), material=white_diffuse)
-        builder.add_box_visual(
-            sapien.Pose([0.4, 1.9, -0.51]), half_size=np.array([0.015, 0.015, 0.49]), material=white_diffuse
+        builder.add_box_collision(
+            sapien.Pose([0, 0, -0.02]), half_size=np.array([0.5, 2.0, 0.02])
         )
         builder.add_box_visual(
-            sapien.Pose([-0.4, 1.9, -0.51]), half_size=np.array([0.015, 0.015, 0.49]), material=white_diffuse
+            sapien.Pose([0, 0, -0.02]),
+            half_size=np.array([0.5, 2.0, 0.02]),
+            material=white_diffuse,
         )
         builder.add_box_visual(
-            sapien.Pose([0.4, -1.9, -0.51]), half_size=np.array([0.015, 0.015, 0.49]), material=white_diffuse
+            sapien.Pose([0.4, 1.9, -0.51]),
+            half_size=np.array([0.015, 0.015, 0.49]),
+            material=white_diffuse,
         )
         builder.add_box_visual(
-            sapien.Pose([-0.4, -1.9, -0.51]), half_size=np.array([0.015, 0.015, 0.49]), material=white_diffuse
+            sapien.Pose([-0.4, 1.9, -0.51]),
+            half_size=np.array([0.015, 0.015, 0.49]),
+            material=white_diffuse,
+        )
+        builder.add_box_visual(
+            sapien.Pose([0.4, -1.9, -0.51]),
+            half_size=np.array([0.015, 0.015, 0.49]),
+            material=white_diffuse,
+        )
+        builder.add_box_visual(
+            sapien.Pose([-0.4, -1.9, -0.51]),
+            half_size=np.array([0.015, 0.015, 0.49]),
+            material=white_diffuse,
         )
         self.table = builder.build_static(name="table")
         self.table.set_pose(sapien.Pose([0.5, 0, 0]))
@@ -112,7 +132,9 @@ class HandDatasetSAPIENViewer:
         self.scene = scene
         self.internal_scene: R.Scene = scene.render_system._internal_scene
         self.context: R.Context = sapien.render.SapienRenderer()._internal_context
-        self.mat_hand = self.context.create_material(np.zeros(4), np.array([0.96, 0.75, 0.69, 1]), 0.0, 0.8, 0)
+        self.mat_hand = self.context.create_material(
+            np.zeros(4), np.array([0.96, 0.75, 0.69, 1]), 0.0, 0.8, 0
+        )
 
         self.mano_layer: Optional[MANOLayer] = None
         self.mano_face: Optional[np.ndarray] = None
@@ -192,7 +214,10 @@ class HandDatasetSAPIENViewer:
         if self.headless:
             video_path = Path(__file__).parent.resolve() / "data/human_hand_video.mp4"
             writer = cv2.VideoWriter(
-                str(video_path), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (self.camera.get_width(), self.camera.get_height())
+                str(video_path),
+                cv2.VideoWriter_fourcc(*"mp4v"),
+                30.0,
+                (self.camera.get_width(), self.camera.get_height()),
             )
 
         step_per_frame = int(60 / fps)
@@ -204,7 +229,9 @@ class HandDatasetSAPIENViewer:
                 self._update_hand(vertex)
             for k in range(len(self.objects)):
                 pos_quat = object_pose_frame[k]
-                pose = self.camera_pose * sapien.Pose(pos_quat[4:], np.concatenate([pos_quat[3:4], pos_quat[:3]]))
+                pose = self.camera_pose * sapien.Pose(
+                    pos_quat[4:], np.concatenate([pos_quat[3:4], pos_quat[:3]])
+                )
                 self.objects[k].set_pose(pose)
             self.scene.update_render()
             if self.headless:

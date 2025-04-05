@@ -30,7 +30,9 @@ class SeqRetargeting:
         self.joint_limits = joint_limits[self.optimizer.idx_pin2target]
 
         # Temporal information
-        self.last_qpos = joint_limits.mean(1)[self.optimizer.idx_pin2target].astype(np.float32)
+        self.last_qpos = joint_limits.mean(1)[self.optimizer.idx_pin2target].astype(
+            np.float32
+        )
         self.accumulated_time = 0
         self.num_retargeting = 0
 
@@ -68,7 +70,9 @@ class SeqRetargeting:
         operator2mano = OPERATOR2MANO[hand_type] if is_mano_convention else np.eye(3)
         robot = self.optimizer.robot
         target_wrist_pose = np.eye(4)
-        target_wrist_pose[:3, :3] = rotations.matrix_from_quaternion(wrist_quat) @ operator2mano.T
+        target_wrist_pose[:3, :3] = (
+            rotations.matrix_from_quaternion(wrist_quat) @ operator2mano.T
+        )
         target_wrist_pose[:3, 3] = wrist_pos
 
         name_list = [
@@ -92,7 +96,9 @@ class SeqRetargeting:
         root2wrist = robot.get_link_pose_inv(wrist_link_id)
         target_root_pose = target_wrist_pose @ root2wrist
 
-        euler = rotations.euler_from_matrix(target_root_pose[:3, :3], 0, 1, 2, extrinsic=False)
+        euler = rotations.euler_from_matrix(
+            target_root_pose[:3, :3], 0, 1, 2, extrinsic=False
+        )
         pose_vec = np.concatenate([target_root_pose[:3, 3], euler])
 
         # Find the dummy joints
@@ -109,7 +115,9 @@ class SeqRetargeting:
         qpos = self.optimizer.retarget(
             ref_value=ref_value.astype(np.float32),
             fixed_qpos=fixed_qpos.astype(np.float32),
-            last_qpos=np.clip(self.last_qpos, self.joint_limits[:, 0], self.joint_limits[:, 1]),
+            last_qpos=np.clip(
+                self.last_qpos, self.joint_limits[:, 0], self.joint_limits[:, 1]
+            ),
         )
         self.accumulated_time += time.perf_counter() - tic
         self.num_retargeting += 1
@@ -138,7 +146,9 @@ class SeqRetargeting:
 
     def verbose(self):
         min_value = self.optimizer.opt.last_optimum_value()
-        print(f"Retargeting {self.num_retargeting} times takes: {self.accumulated_time}s")
+        print(
+            f"Retargeting {self.num_retargeting} times takes: {self.accumulated_time}s"
+        )
         print(f"Last distance: {min_value}")
 
     def reset(self):

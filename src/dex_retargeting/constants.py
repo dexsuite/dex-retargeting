@@ -33,7 +33,9 @@ class RobotName(enum.Enum):
 
 class RetargetingType(enum.Enum):
     vector = enum.auto()  # For teleoperation, no finger closing prior
-    position = enum.auto()  # For offline data processing, especially hand-object interaction data
+    position = (
+        enum.auto()
+    )  # For offline data processing, especially hand-object interaction data
     dexpilot = enum.auto()  # For teleoperation, with finger closing prior
 
 

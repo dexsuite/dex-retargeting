@@ -12,7 +12,9 @@ class KinematicAdaptor:
         self.target_joint_names = target_joint_names
 
         # Index mapping
-        self.idx_pin2target = np.array([robot.get_joint_index(n) for n in target_joint_names])
+        self.idx_pin2target = np.array(
+            [robot.get_joint_index(n) for n in target_joint_names]
+        )
 
     @abstractmethod
     def forward_qpos(self, qpos: np.ndarray) -> np.ndarray:
@@ -68,14 +70,23 @@ class MimicJointKinematicAdaptor(KinematicAdaptor):
             )
 
         # Indices in the pinocchio
-        self.idx_pin2source = np.array([robot.get_joint_index(name) for name in source_joint_names])
-        self.idx_pin2mimic = np.array([robot.get_joint_index(name) for name in mimic_joint_names])
+        self.idx_pin2source = np.array(
+            [robot.get_joint_index(name) for name in source_joint_names]
+        )
+        self.idx_pin2mimic = np.array(
+            [robot.get_joint_index(name) for name in mimic_joint_names]
+        )
 
         # Indices in the output results
-        self.idx_target2source = np.array([self.target_joint_names.index(n) for n in source_joint_names])
+        self.idx_target2source = np.array(
+            [self.target_joint_names.index(n) for n in source_joint_names]
+        )
 
         # Dimension check
-        len_source, len_mimic = self.idx_target2source.shape[0], self.idx_pin2mimic.shape[0]
+        len_source, len_mimic = (
+            self.idx_target2source.shape[0],
+            self.idx_pin2mimic.shape[0],
+        )
         len_mul, len_offset = self.multipliers.shape[0], self.offsets.shape[0]
         if not (len_mimic == len_source == len_mul == len_offset):
             raise ValueError(
