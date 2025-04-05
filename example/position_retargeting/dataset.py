@@ -116,7 +116,9 @@ class DexYCBVideoDataset:
 
         # Filter
         self.use_filter = len(filter_objects) > 0
-        inverse_ycb_class = {"_".join(value.split("_")[1:]): key for key, value in YCB_CLASSES.items()}
+        inverse_ycb_class = {
+            "_".join(value.split("_")[1:]): key for key, value in YCB_CLASSES.items()
+        }
         ycb_object_names = list(inverse_ycb_class.keys())
         filter_ids = []
         for obj in filter_objects:
@@ -131,7 +133,9 @@ class DexYCBVideoDataset:
         self._mano_parameters = self._load_mano()
 
         # Capture data
-        self._subject_dirs = [sub for sub in self._data_dir.iterdir() if sub.stem in _SUBJECTS]
+        self._subject_dirs = [
+            sub for sub in self._data_dir.iterdir() if sub.stem in _SUBJECTS
+        ]
         self._capture_meta = {}
         self._capture_pose = {}
         self._capture_filter = {}
@@ -151,9 +155,13 @@ class DexYCBVideoDataset:
                     # Skip current capture if no desired object inside
                     if len(list(set(ycb_ids) & set(filter_ids))) < 1:
                         continue
-                    capture_filter = [i for i in range(len(ycb_ids)) if ycb_ids[i] in filter_ids]
+                    capture_filter = [
+                        i for i in range(len(ycb_ids)) if ycb_ids[i] in filter_ids
+                    ]
                     object_pose = pose["pose_y"]
-                    frame_indices, filter_id = self._filter_object_motion_frame(capture_filter, object_pose)
+                    frame_indices, filter_id = self._filter_object_motion_frame(
+                        capture_filter, object_pose
+                    )
                     if len(frame_indices) < 20:
                         continue
                     self._capture_filter[capture_dir.stem] = [filter_id]
@@ -177,15 +185,23 @@ class DexYCBVideoDataset:
 
         # Load extrinsic and mano parameters
         extrinsic_name = meta["extrinsics"]
-        extrinsic_mat = np.array(self._extrinsics[extrinsic_name]["extrinsics"]["apriltag"]).reshape([3, 4])
-        extrinsic_mat = np.concatenate([extrinsic_mat, np.array([[0, 0, 0, 1]])], axis=0)
+        extrinsic_mat = np.array(
+            self._extrinsics[extrinsic_name]["extrinsics"]["apriltag"]
+        ).reshape([3, 4])
+        extrinsic_mat = np.concatenate(
+            [extrinsic_mat, np.array([[0, 0, 0, 1]])], axis=0
+        )
         mano_name = meta["mano_calib"][0]
         mano_parameters = self._mano_parameters[mano_name]
 
         if self.use_filter:
             capture_filter = np.array(self._capture_filter[capture_name])
-            frame_indices, _ = self._filter_object_motion_frame(capture_filter, object_pose)
-            ycb_ids = [ycb_ids[valid_id] for valid_id in self._capture_filter[capture_name]]
+            frame_indices, _ = self._filter_object_motion_frame(
+                capture_filter, object_pose
+            )
+            ycb_ids = [
+                ycb_ids[valid_id] for valid_id in self._capture_filter[capture_name]
+            ]
             hand_pose = hand_pose[frame_indices]
             object_pose = object_pose[frame_indices][:, capture_filter, :]
         object_mesh_files = [self._object_mesh_file(ycb_id) for ycb_id in ycb_ids]
@@ -207,7 +223,9 @@ class DexYCBVideoDataset:
             filter_object_pose = object_pose[:, filter_id, :]
             object_move_list = []
             for frame in range(filter_object_pose.shape[0] - 2):
-                object_move_list.append(self.is_object_move(filter_object_pose[frame:, :]))
+                object_move_list.append(
+                    self.is_object_move(filter_object_pose[frame:, :])
+                )
             if True not in object_move_list:
                 continue
             first_frame = object_move_list.index(True)
@@ -222,12 +240,19 @@ class DexYCBVideoDataset:
     def is_object_move(single_object_pose: np.ndarray):
         single_object_trans = single_object_pose[:, 4:]
         future_frame = min(single_object_trans.shape[0] - 1, 5)
-        current_move = np.linalg.norm(single_object_trans[1] - single_object_trans[0]) > 2e-2
-        future_move = np.linalg.norm(single_object_trans[future_frame] - single_object_trans[0]) > 5e-2
+        current_move = (
+            np.linalg.norm(single_object_trans[1] - single_object_trans[0]) > 2e-2
+        )
+        future_move = (
+            np.linalg.norm(single_object_trans[future_frame] - single_object_trans[0])
+            > 5e-2
+        )
         return current_move or future_move
 
     def _object_mesh_file(self, object_id):
-        obj_file = self._data_dir / "models" / YCB_CLASSES[object_id] / "textured_simple.obj"
+        obj_file = (
+            self._data_dir / "models" / YCB_CLASSES[object_id] / "textured_simple.obj"
+        )
         return str(obj_file.resolve())
 
     def _load_camera_parameters(self):
@@ -248,7 +273,9 @@ class DexYCBVideoDataset:
                 intrinsic = yaml.load(f, Loader=yaml.FullLoader)
             name = intrinsic_file.stem.split("_")[0]
             x = intrinsic["color"]
-            camera_mat = np.array([[x["fx"], 0.0, x["ppx"]], [0.0, x["fy"], x["ppy"]], [0.0, 0.0, 1.0]])
+            camera_mat = np.array(
+                [[x["fx"], 0.0, x["ppx"]], [0.0, x["fy"], x["ppy"]], [0.0, 0.0, 1.0]]
+            )
             intrinsics[name] = camera_mat
 
         return intrinsics, extrinsics

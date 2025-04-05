@@ -5,13 +5,20 @@ import cv2
 import tqdm
 import tyro
 
-from dex_retargeting.constants import RobotName, RetargetingType, HandType, get_default_config_path
+from dex_retargeting.constants import (
+    RobotName,
+    RetargetingType,
+    HandType,
+    get_default_config_path,
+)
 from dex_retargeting.retargeting_config import RetargetingConfig
 from dex_retargeting.seq_retarget import SeqRetargeting
 from single_hand_detector import SingleHandDetector
 
 
-def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: str, config_path: str):
+def retarget_video(
+    retargeting: SeqRetargeting, video_path: str, output_path: str, config_path: str
+):
     cap = cv2.VideoCapture(video_path)
 
     data = []
@@ -29,7 +36,9 @@ def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: st
                     break
 
                 rgb = frame[..., ::-1]
-                num_box, joint_pos, keypoint_2d, mediapipe_wrist_rot = detector.detect(rgb)
+                num_box, joint_pos, keypoint_2d, mediapipe_wrist_rot = detector.detect(
+                    rgb
+                )
                 if num_box == 0:
                     continue
 
@@ -41,7 +50,9 @@ def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: st
                 else:
                     origin_indices = indices[0, :]
                     task_indices = indices[1, :]
-                    ref_value = joint_pos[task_indices, :] - joint_pos[origin_indices, :]
+                    ref_value = (
+                        joint_pos[task_indices, :] - joint_pos[origin_indices, :]
+                    )
                 qpos = retargeting.retarget(ref_value)
                 data.append(qpos)
                 pbar.update(1)
@@ -63,7 +74,11 @@ def retarget_video(retargeting: SeqRetargeting, video_path: str, output_path: st
 
 
 def main(
-    robot_name: RobotName, video_path: str, output_path: str, retargeting_type: RetargetingType, hand_type: HandType
+    robot_name: RobotName,
+    video_path: str,
+    output_path: str,
+    retargeting_type: RetargetingType,
+    hand_type: HandType,
 ):
     """
     Detects the human hand pose from a video and translates the human pose trajectory into a robot pose trajectory.
@@ -79,7 +94,9 @@ def main(
     """
 
     config_path = get_default_config_path(robot_name, retargeting_type, hand_type)
-    robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    robot_dir = (
+        Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    )
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
     retargeting = RetargetingConfig.load_from_file(config_path).build()
     retarget_video(retargeting, video_path, output_path, str(config_path))

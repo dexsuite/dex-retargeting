@@ -12,7 +12,12 @@ from loguru import logger
 from sapien.asset import create_dome_envmap
 from sapien.utils import Viewer
 
-from dex_retargeting.constants import RobotName, RetargetingType, HandType, get_default_config_path
+from dex_retargeting.constants import (
+    RobotName,
+    RetargetingType,
+    HandType,
+    get_default_config_path,
+)
 from dex_retargeting.retargeting_config import RetargetingConfig
 from single_hand_detector import SingleHandDetector
 
@@ -43,11 +48,17 @@ def start_retargeting(queue: multiprocessing.Queue, robot_dir: str, config_path:
     scene.add_directional_light(np.array([1, 1, -1]), np.array([3, 3, 3]))
     scene.add_point_light(np.array([2, 2, 2]), np.array([2, 2, 2]), shadow=False)
     scene.add_point_light(np.array([2, -2, 2]), np.array([2, 2, 2]), shadow=False)
-    scene.set_environment_map(create_dome_envmap(sky_color=[0.2, 0.2, 0.2], ground_color=[0.2, 0.2, 0.2]))
-    scene.add_area_light_for_ray_tracing(sapien.Pose([2, 1, 2], [0.707, 0, 0.707, 0]), np.array([1, 1, 1]), 5, 5)
+    scene.set_environment_map(
+        create_dome_envmap(sky_color=[0.2, 0.2, 0.2], ground_color=[0.2, 0.2, 0.2])
+    )
+    scene.add_area_light_for_ray_tracing(
+        sapien.Pose([2, 1, 2], [0.707, 0, 0.707, 0]), np.array([1, 1, 1]), 5, 5
+    )
 
     # Camera
-    cam = scene.add_camera(name="Cheese!", width=600, height=600, fovy=1, near=0.1, far=10)
+    cam = scene.add_camera(
+        name="Cheese!", width=600, height=600, fovy=1, near=0.1, far=10
+    )
     cam.set_local_pose(sapien.Pose([0.50, 0, 0.0], [0, 0, 0, -1]))
 
     viewer = Viewer()
@@ -102,14 +113,18 @@ def start_retargeting(queue: multiprocessing.Queue, robot_dir: str, config_path:
     # Different robot loader may have different orders for joints
     sapien_joint_names = [joint.get_name() for joint in robot.get_active_joints()]
     retargeting_joint_names = retargeting.joint_names
-    retargeting_to_sapien = np.array([retargeting_joint_names.index(name) for name in sapien_joint_names]).astype(int)
+    retargeting_to_sapien = np.array(
+        [retargeting_joint_names.index(name) for name in sapien_joint_names]
+    ).astype(int)
 
     while True:
         try:
             bgr = queue.get(timeout=5)
             rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
         except Empty:
-            logger.error(f"Fail to fetch image from camera in 5 secs. Please check your web camera device.")
+            logger.error(
+                "Fail to fetch image from camera in 5 secs. Please check your web camera device."
+            )
             return
 
         _, joint_pos, keypoint_2d, _ = detector.detect(rgb)
@@ -152,7 +167,10 @@ def produce_frame(queue: multiprocessing.Queue, camera_path: Optional[str] = Non
 
 
 def main(
-    robot_name: RobotName, retargeting_type: RetargetingType, hand_type: HandType, camera_path: Optional[str] = None
+    robot_name: RobotName,
+    retargeting_type: RetargetingType,
+    hand_type: HandType,
+    camera_path: Optional[str] = None,
 ):
     """
     Detects the human hand pose from a video and translates the human pose trajectory into a robot pose trajectory.
@@ -166,11 +184,17 @@ def main(
         camera_path: the device path to feed to opencv to open the web camera. It will use 0 by default.
     """
     config_path = get_default_config_path(robot_name, retargeting_type, hand_type)
-    robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    robot_dir = (
+        Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    )
 
     queue = multiprocessing.Queue(maxsize=1000)
-    producer_process = multiprocessing.Process(target=produce_frame, args=(queue, camera_path))
-    consumer_process = multiprocessing.Process(target=start_retargeting, args=(queue, str(robot_dir), str(config_path)))
+    producer_process = multiprocessing.Process(
+        target=produce_frame, args=(queue, camera_path)
+    )
+    consumer_process = multiprocessing.Process(
+        target=start_retargeting, args=(queue, str(robot_dir), str(config_path))
+    )
 
     producer_process.start()
     consumer_process.start()

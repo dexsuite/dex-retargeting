@@ -855,8 +855,8 @@ class URDF:
             self._joint_map[j.name] = j
 
         self._link_map = {}
-        for l in self.robot.links:
-            self._link_map[l.name] = l
+        for link in self.robot.links:
+            self._link_map[link.name] = link
 
     def _update_actuated_joints(self):
         self._actuated_joints = []
@@ -973,8 +973,8 @@ class URDF:
             element = self.robot
 
         result = False
-        for field in element.__dataclass_fields__:
-            field_value = getattr(element, field)
+        for data_field in element.__dataclass_fields__:
+            field_value = getattr(element, data_field)
             if is_dataclass(field_value):
                 result = result or self.contains(
                     key=key, value=value, element=field_value
@@ -989,7 +989,7 @@ class URDF:
                         key=key, value=value, element=field_value_element
                     )
             else:
-                if key == field and value == field_value:
+                if key == data_field and value == field_value:
                     result = True
         return result
 
@@ -1000,7 +1000,7 @@ class URDF:
         Returns:
             str: Name of the base link.
         """
-        link_names = [l.name for l in self.robot.links]
+        link_names = [link.name for link in self.robot.links]
 
         for j in self.robot.joints:
             link_names.remove(j.child)
@@ -1065,10 +1065,10 @@ class URDF:
         return subrobot
 
     def validate_filenames(self):
-        for l in self.robot.links:
+        for link in self.robot.links:
             meshes = [
                 m.geometry.mesh
-                for m in l.collisions + l.visuals
+                for m in link.collisions + link.visuals
                 if m.geometry.mesh is not None
             ]
             for m in meshes:
@@ -1805,18 +1805,18 @@ class URDF:
     def _parse_robot(xml_element, add_dummy_free_joints=False):
         robot = Robot(name=xml_element.attrib["name"])
 
-        for l in xml_element.findall("link"):
-            robot.links.append(URDF._parse_link(l))
-        for j in xml_element.findall("joint"):
-            robot.joints.append(URDF._parse_joint(j))
-        for m in xml_element.findall("material"):
-            robot.materials.append(URDF._parse_material(m))
+        for link in xml_element.findall("link"):
+            robot.links.append(URDF._parse_link(link))
+        for joint in xml_element.findall("joint"):
+            robot.joints.append(URDF._parse_joint(joint))
+        for material in xml_element.findall("material"):
+            robot.materials.append(URDF._parse_material(material))
 
         if add_dummy_free_joints:
             # Determine root link
-            link_names = [l.name for l in robot.links]
-            for j in robot.joints:
-                link_names.remove(j.child)
+            link_names = [link.name for link in robot.links]
+            for joint in robot.joints:
+                link_names.remove(joint.child)
 
             if len(link_names) == 0:
                 raise RuntimeError("No root link found for robot.")
@@ -1833,11 +1833,11 @@ class URDF:
                 error_msg="The <robot> tag misses a 'name' attribute.",
             )
 
-            for l in robot.links:
-                self._validate_link(l)
+            for link in robot.links:
+                self._validate_link(link)
 
-            for j in robot.joints:
-                self._validate_joint(j)
+            for joint in robot.joints:
+                self._validate_joint(joint)
 
     def _write_robot(self, robot):
         xml_element = etree.Element("robot", attrib={"name": robot.name})
@@ -1892,7 +1892,7 @@ class URDF:
         for joint in bfs_joint_list:
             matrix, _ = self._forward_kinematics_joint(joint, 0)
             parent_node = anytree.search.findall_by_attr(root, value=joint.parent)[0]
-            node = Node(joint.child, parent=parent_node, matrix=matrix)
+            _ = Node(joint.child, parent=parent_node, matrix=matrix)
         return root
 
     def update_kinematics(self, configuration):

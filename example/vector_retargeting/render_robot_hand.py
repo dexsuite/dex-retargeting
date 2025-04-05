@@ -52,11 +52,17 @@ def render_by_sapien(
     scene.add_directional_light(np.array([1, 1, -1]), np.array([3, 3, 3]))
     scene.add_point_light(np.array([2, 2, 2]), np.array([2, 2, 2]), shadow=False)
     scene.add_point_light(np.array([2, -2, 2]), np.array([2, 2, 2]), shadow=False)
-    scene.set_environment_map(create_dome_envmap(sky_color=[0.2, 0.2, 0.2], ground_color=[0.2, 0.2, 0.2]))
-    scene.add_area_light_for_ray_tracing(sapien.Pose([2, 1, 2], [0.707, 0, 0.707, 0]), np.array([1, 1, 1]), 5, 5)
+    scene.set_environment_map(
+        create_dome_envmap(sky_color=[0.2, 0.2, 0.2], ground_color=[0.2, 0.2, 0.2])
+    )
+    scene.add_area_light_for_ray_tracing(
+        sapien.Pose([2, 1, 2], [0.707, 0, 0.707, 0]), np.array([1, 1, 1]), 5, 5
+    )
 
     # Camera
-    cam = scene.add_camera(name="Cheese!", width=600, height=600, fovy=1, near=0.1, far=10)
+    cam = scene.add_camera(
+        name="Cheese!", width=600, height=600, fovy=1, near=0.1, far=10
+    )
     cam.set_local_pose(sapien.Pose([0.50, 0, 0.0], [0, 0, 0, -1]))
 
     # Viewer
@@ -118,13 +124,18 @@ def render_by_sapien(
     if record_video:
         Path(output_video_path).parent.mkdir(parents=True, exist_ok=True)
         writer = cv2.VideoWriter(
-            output_video_path, cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (cam.get_width(), cam.get_height())
+            output_video_path,
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            30.0,
+            (cam.get_width(), cam.get_height()),
         )
 
     # Different robot loader may have different orders for joints
     sapien_joint_names = [joint.get_name() for joint in robot.get_active_joints()]
     retargeting_joint_names = meta_data["joint_names"]
-    retargeting_to_sapien = np.array([retargeting_joint_names.index(name) for name in sapien_joint_names]).astype(int)
+    retargeting_to_sapien = np.array(
+        [retargeting_joint_names.index(name) for name in sapien_joint_names]
+    ).astype(int)
 
     for qpos in tqdm.tqdm(data):
         robot.set_qpos(np.array(qpos)[retargeting_to_sapien])
@@ -159,7 +170,9 @@ def main(
             By default, it is set to None, implying no video will be saved.
         headless: Set to visualize the rendering on the screen by opening the viewer window.
     """
-    robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    robot_dir = (
+        Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+    )
     RetargetingConfig.set_default_urdf_dir(str(robot_dir))
 
     pickle_data = np.load(pickle_path, allow_pickle=True)

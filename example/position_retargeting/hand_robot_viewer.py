@@ -21,7 +21,13 @@ from dex_retargeting.seq_retarget import SeqRetargeting
 
 
 class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
-    def __init__(self, robot_names: List[RobotName], hand_type: HandType, headless=False, use_ray_tracing=False):
+    def __init__(
+        self,
+        robot_names: List[RobotName],
+        hand_type: HandType,
+        headless=False,
+        use_ray_tracing=False,
+    ):
         super().__init__(headless=headless, use_ray_tracing=use_ray_tracing)
 
         self.robot_names = robot_names
@@ -36,7 +42,9 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
         loader.fix_root_link = True
         loader.load_multiple_collisions_from_file = True
         for robot_name in robot_names:
-            config_path = get_default_config_path(robot_name, RetargetingType.position, hand_type)
+            config_path = get_default_config_path(
+                robot_name, RetargetingType.position, hand_type
+            )
 
             # Add 6-DoF dummy joint at the root of each robot to make them move freely in the space
             override = dict(add_dummy_free_joint=True)
@@ -50,7 +58,9 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
             urdf_path = Path(config.urdf_path)
             if "glb" not in urdf_path.stem:
                 urdf_path = urdf_path.with_stem(urdf_path.stem + "_glb")
-            robot_urdf = urdf.URDF.load(str(urdf_path), add_dummy_free_joints=True, build_scene_graph=False)
+            robot_urdf = urdf.URDF.load(
+                str(urdf_path), add_dummy_free_joints=True, build_scene_graph=False
+            )
             urdf_name = urdf_path.name
             temp_dir = tempfile.mkdtemp(prefix="dex_retargeting-")
             temp_path = f"{temp_dir}/{urdf_name}"
@@ -59,7 +69,9 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
             robot = loader.load(temp_path)
             self.robots.append(robot)
             sapien_joint_names = [joint.name for joint in robot.get_active_joints()]
-            retarget2sapien = np.array([retargeting.joint_names.index(n) for n in sapien_joint_names]).astype(int)
+            retarget2sapien = np.array(
+                [retargeting.joint_names.index(n) for n in sapien_joint_names]
+            ).astype(int)
             self.retarget2sapien.append(retarget2sapien)
 
     def load_object_hand(self, data: Dict):
@@ -109,7 +121,9 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
         if self.headless:
             robot_names = [robot.name for robot in self.robot_names]
             robot_names = "_".join(robot_names)
-            video_path = Path(__file__).parent.resolve() / f"data/{robot_names}_video.mp4"
+            video_path = (
+                Path(__file__).parent.resolve() / f"data/{robot_names}_video.mp4"
+            )
             writer = cv2.VideoWriter(
                 str(video_path),
                 cv2.VideoWriter_fourcc(*"mp4v"),
@@ -119,9 +133,13 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
 
         # Warm start
         hand_pose_start = hand_pose[start_frame]
-        wrist_quat = rotations.quaternion_from_compact_axis_angle(hand_pose_start[0, 0:3])
+        wrist_quat = rotations.quaternion_from_compact_axis_angle(
+            hand_pose_start[0, 0:3]
+        )
         vertex, joint = self._compute_hand_geometry(hand_pose_start)
-        for robot, retargeting, retarget2sapien in zip(self.robots, self.retargetings, self.retarget2sapien):
+        for robot, retargeting, retarget2sapien in zip(
+            self.robots, self.retargetings, self.retarget2sapien
+        ):
             retargeting.warm_start(
                 joint[0, :],
                 wrist_quat,
@@ -141,16 +159,22 @@ class RobotHandDatasetSAPIENViewer(HandDatasetSAPIENViewer):
                 pos_quat = object_pose_frame[k]
 
                 # Quaternion convention: xyzw -> wxyz
-                pose = self.camera_pose * sapien.Pose(pos_quat[4:], np.concatenate([pos_quat[3:4], pos_quat[:3]]))
+                pose = self.camera_pose * sapien.Pose(
+                    pos_quat[4:], np.concatenate([pos_quat[3:4], pos_quat[:3]])
+                )
                 self.objects[k].set_pose(pose)
                 for copy_ind in range(num_copy):
-                    self.objects[k + copy_ind * num_ycb_objects].set_pose(pose_offsets[copy_ind] * pose)
+                    self.objects[k + copy_ind * num_ycb_objects].set_pose(
+                        pose_offsets[copy_ind] * pose
+                    )
 
             # Update pose for human hand
             self._update_hand(vertex)
 
             # Update poses for robot hands
-            for robot, retargeting, retarget2sapien in zip(self.robots, self.retargetings, self.retarget2sapien):
+            for robot, retargeting, retarget2sapien in zip(
+                self.robots, self.retargetings, self.retarget2sapien
+            ):
                 indices = retargeting.optimizer.target_link_human_indices
                 ref_value = joint[indices, :]
                 qpos = retargeting.retarget(ref_value)[retarget2sapien]
