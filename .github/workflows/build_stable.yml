@@ -32,7 +32,7 @@ jobs:
         run: pip3 install setuptools build --upgrade && python -m build -w
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: ./dist/*.whl
